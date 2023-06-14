@@ -7,7 +7,11 @@ classdef PCCArm
     end
     
     methods
-        function obj = PCCArm(n_rods)
+        function obj = PCCArm(n_rods, g_base)
+            arguments
+                n_rods=1
+                g_base = SE2.hat([0, 0, 0])
+            end
             color_blue = [100 143 255] / 255;
             color_red = [220 38 127] / 255;
             color_yellow = [255 176 0] / 255;
@@ -15,7 +19,6 @@ classdef PCCArm
             colors = {color_yellow, color_blue, color_red};
             
             % Define the geometry of our 3-link continuum arm
-            g_base = SE2.hat([0, 0, -pi/2]);
             
             % Create the set of rods in the multisegment arm
             default_length = 1;
@@ -57,7 +60,7 @@ classdef PCCArm
             axis(ax, 'equal')
             for i = 1 : length(obj.rods)
                 obj.rods(i).plot_muscle(ax, line_options=options.line_options);
-                obj.rods(i).plot_tforms(ax, resolution=10, plot_options=options.tform_options);
+                %obj.rods(i).plot_tforms(ax, resolution=10, plot_options=options.tform_options);
             end
         end
     end
