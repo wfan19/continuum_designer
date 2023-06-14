@@ -12,7 +12,7 @@ classdef PCCArm
             color_red = [220 38 127] / 255;
             color_yellow = [255 176 0] / 255;
             
-            colors = {color_blue, color_red, color_yellow};
+            colors = {color_yellow, color_blue, color_red};
             
             % Define the geometry of our 3-link continuum arm
             g_base = SE2.hat([0, 0, -pi/2]);
