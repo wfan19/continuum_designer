@@ -5,65 +5,63 @@ q_0 = [1, 0]';
 n_segments = length(q_0) / 2;
 
 % Create curvature sweep
-n_timestamps = 10;
-curvature_base = linspace(0.1, 0.5, n_timestamps);
+n_timestamps = 5;
+curvature_base = linspace(1, 1.2, n_timestamps);
 qs = repmat(q_0, 1, n_timestamps);
 qs(2, :) = curvature_base;
 
-% Compute forward kinematics for each configuration vector, and then plot
-% the results.
-g_tip_poses = zeros(3, n_timestamps);
+%%% Compute forward kinematics for each configuration vector, and then plot the results.
+joint_poses = cell(1, n_segments);      % I'd use a 3d array here if matlab's 3d arrays were better :(
+joint_poses(:) = {zeros(3, n_timestamps)};
 arms = PCCArm.empty(0, n_timestamps);
-for i = 1 : size(qs, 2)
-    q_i = qs(:, i);
-    arms(i) = PCCArm(n_segments, g_base);
-    g_tip_poses(:, i) = arms(i).update(q_i);
+for i_q = 1 : size(qs, 2)
+    q_i = qs(:, i_q);
+    arms(i_q) = PCCArm(n_segments, g_base);
+    arms(i_q).update(q_i);
+    for i_rod = 1 : n_segments
+        joint_poses{i_rod}(:, i_q) = arms(i_q).rods(i_rod).calc_posns();
+    end
 end
 
-%%% Validate the jacobian
-g_tips_predicted = zeros(3, n_timestamps);
-g_tips_predicted(:, 1) = g_tip_poses(:, 1);
-for i = 1 : size(qs, 2) - 1
-    % Given the step in configuration, find the change in pose predicted by
-    % the jacobian
-    q_i = qs(:, i);
-    delta_q = qs(:, i+1) - qs(:, i);
-    delta_g_predicted = pcc_jacobian(q_i) * delta_q;
-    g_tip_next_predicted = g_tips_predicted(:, i) + delta_g_predicted;
-
-    % Retrieve the actual change in pose
-    g_tip_next_actual = g_tip_poses(:, i+1);
-    
-    % Compare the two
-    g_error = g_tip_next_actual - g_tip_next_predicted;
-    fprintf("g(%i) - g_predicted(%i): [%.3f %.3f %.3f]\n", i+1, i+1, g_error(1), g_error(2), g_error(3))
-
-    g_tips_predicted(:, i+1) = g_tip_next_predicted;
-end
-
-%%% Plotting
 % Plot the arms
 ax = axes(figure());
 for i = 1 : size(qs, 2)
     arms(i).plot_arm(ax)
 end
-
-% Plot the predicted vs actual tip trajectory
 hold(ax, 'on')
-plot(g_tips_predicted(1, :), g_tips_predicted(2, :), "bx")
-plot(g_tip_poses(1, :), g_tip_poses(2, :), "rx")
 
-%% Jacobian function implementation
-function mat_jacobian = pcc_jacobian(q)
-    mat_jacobian = zeros(3, length(q));
+joint_poses_predicted = cell(1, n_segments); % Lets save all the delta gs
+%%% Validate the jacobian
+for joint = 1 : n_segments
+    % Matrix of the poses for this joint as we sweep the configuration
+    g_joint_predicted = zeros(3, n_timestamps);
+    g_joint_predicted(:, 1) = joint_poses{joint}(:, 1);
 
-    if length(q) == 2
-        l = q(1);
-        k = q(2);
-        mat_jacobian = [
-            1/k * sin(k), (l/k^2) * (k*cos(k) - sin(k));
-            -1/k * (cos(k) - 1), (-l/k^2) * (-sin(k) * k - cos(k) + 1);
-            0, 1
-        ];
+    for i = 1 : size(qs, 2) - 1
+        % Given the step in configuration, find the change in pose predicted by the jacobian
+        q_i = qs(:, i);
+        delta_q = qs(:, i+1) - qs(:, i);
+        delta_g_world = pcc_jacobian(arms(i), q_i, joint) * delta_q;
+
+        % Apply the transformation
+        last_g_joint = g_joint_predicted(:, i);
+        g_joint_next_predicted = last_g_joint + delta_g_world;
+        disp("Delta g body:")
+        disp(delta_g_world)
+    
+        % Retrieve the actual change in pose
+        g_joint_next_actual = joint_poses{joint}(:, i+1);
+        
+        % Compare the two
+        g_error = g_joint_next_actual - g_joint_next_predicted;
+        fprintf("Joint %i: g(%i) - g_predicted(%i): [%.3f %.3f %.3f]\n", joint, i+1, i+1, g_error(1), g_error(2), g_error(3))
+    
+        g_joint_predicted(:, i+1) = g_joint_next_predicted;
     end
+
+    joint_poses_predicted{joint} = g_joint_predicted;
+
+    % Plot the predicted vs actual tip trajectory
+    plot(g_joint_predicted(1, :), g_joint_predicted(2, :), "bx")
+    plot(joint_poses{joint}(1, :), joint_poses{joint}(2, :), "rx")
 end
