@@ -39,8 +39,7 @@ function mat_jacobian = pcc_jacobian(arm, q, link_tip)
             h_i_p = SE2.hat(arm.rods(i).calc_posns());
             delta_h = inv(h_i_p) * h_end_d;
 
-            mat_jacobian(:, 2*i-1 : 2*i) = inv(SE2.adjoint(delta_h))* J_i;
-%             mat_jacobian(:, 2*i-1 : 2*i) = J_i;
+            mat_jacobian(:, 2*i-1 : 2*i) = inv(SE2.adjoint(h_end_d)) * inv(SE2.right_lifted_action(h_i_p)) * J_i;
         else 
             continue
         end        

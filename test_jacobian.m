@@ -1,7 +1,7 @@
 %% Environment for validating a jacobian for multisegment continuum arms
 % Calculate the forward kinematics of the arm
 g_base = SE2.hat([0, 0, 0]);
-q_0 = [1, 0]';
+q_0 = [1, 0, 1, 0]';
 n_segments = length(q_0) / 2;
 
 % Create curvature sweep
@@ -9,6 +9,7 @@ n_timestamps = 5;
 curvature_base = linspace(1, 1.2, n_timestamps);
 qs = repmat(q_0, 1, n_timestamps);
 qs(2, :) = curvature_base;
+%qs(4, :) = -curvature_base;
 
 %%% Compute forward kinematics for each configuration vector, and then plot the results.
 joint_poses = cell(1, n_segments);      % I'd use a 3d array here if matlab's 3d arrays were better :(
@@ -41,7 +42,8 @@ for joint = 1 : n_segments
         % Given the step in configuration, find the change in pose predicted by the jacobian
         q_i = qs(:, i);
         delta_q = qs(:, i+1) - qs(:, i);
-        delta_g_world = pcc_jacobian(arms(i), q_i, joint) * delta_q;
+        TeLg = SE2.left_lifted_action(SE2.hat(arms(i).rods(end).calc_posns()));
+        delta_g_world = TeLg * pcc_jacobian(arms(i), q_i, joint) * delta_q;
 
         % Apply the transformation
         last_g_joint = g_joint_predicted(:, i);
