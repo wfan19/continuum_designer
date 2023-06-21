@@ -1,17 +1,18 @@
 %% Environment for validating a jacobian for multisegment continuum arms
 % Calculate the forward kinematics of the arm
 g_base = SE2.hat([0, 0, 0]);
-q_0 = [1, 0, 1, 0]';
+q_0 = [1, 0]';
 n_segments = length(q_0) / 2;
 
 % Create curvature sweep
-n_timestamps = 5;
-k_0 = 0.5;
-delta_k = 0.3;
+n_timestamps = 10;
+k_0 = 0;
+delta_k = 0.2;
 curvature_base = linspace(k_0, k_0 + delta_k, n_timestamps);
 qs = repmat(q_0, 1, n_timestamps);
-qs(2, :) = 0;
+qs(2, :) = -2 * curvature_base;
 qs(4, :) = curvature_base;
+qs(6, :) = (10 * curvature_base).^2;
 
 %%% Compute forward kinematics for each configuration vector, and then plot the results.
 joint_poses = cell(1, n_segments);      % I'd use a 3d array here if matlab's 3d arrays were better :(
@@ -33,13 +34,15 @@ for i = 1 : size(qs, 2)
 end
 hold(ax, 'on')
 
+disp("============================")
 joint_poses_predicted = cell(1, n_segments); % Lets save all the delta gs
 %%% Validate the jacobian
 for joint = 1 : n_segments
     % Matrix of the poses for this joint as we sweep the configuration
     g_joint_predicted = zeros(3, n_timestamps);
     g_joint_predicted(:, 1) = joint_poses{joint}(:, 1);
-
+    
+    fprintf("\n- - - - - - Joint %i - - - - - -\n", joint)
     for i = 1 : size(qs, 2) - 1
         % Given the step in configuration, find the change in pose predicted by the jacobian
         q_i = qs(:, i);
@@ -49,7 +52,7 @@ for joint = 1 : n_segments
         % Apply the transformation
         last_g_joint = g_joint_predicted(:, i);
         g_joint_next_predicted = last_g_joint + delta_g_world;
-        disp("Delta g world:")
+        fprintf("delta_g(%i):\n", i)
         disp(delta_g_world)
     
         % Retrieve the actual change in pose
@@ -57,7 +60,7 @@ for joint = 1 : n_segments
         
         % Compare the two
         g_error = g_joint_next_actual - g_joint_next_predicted;
-        fprintf("Joint %i: g(%i) - g_predicted(%i): [%.3f %.3f %.3f]\n", joint, i+1, i+1, g_error(1), g_error(2), g_error(3))
+        fprintf("g(%i) - g_predicted(%i): [%.3f %.3f %.3f]\n", i+1, i+1, g_error(1), g_error(2), g_error(3))
     
         g_joint_predicted(:, i+1) = g_joint_next_predicted;
     end
