@@ -1,18 +1,18 @@
 %% Environment for validating a jacobian for multisegment continuum arms
 % Calculate the forward kinematics of the arm
 g_base = SE2.hat([0, 0, 0]);
-q_0 = [1, 0]';
+q_0 = [1, 0, 1, 0, 1, 0, 1, 0]';
 n_segments = length(q_0) / 2;
 
 % Create curvature sweep
-n_timestamps = 10;
+n_timestamps = 60;
 k_0 = 0;
-delta_k = 0.2;
+delta_k = 0.5;
 curvature_base = linspace(k_0, k_0 + delta_k, n_timestamps);
 qs = repmat(q_0, 1, n_timestamps);
-qs(2, :) = -2 * curvature_base;
-qs(4, :) = curvature_base;
-qs(6, :) = (10 * curvature_base).^2;
+qs(2, :) = curvature_base;
+qs(4, :) = (2*curvature_base).^2;
+qs(8, :) = -curvature_base;
 
 %%% Compute forward kinematics for each configuration vector, and then plot the results.
 joint_poses = cell(1, n_segments);      % I'd use a 3d array here if matlab's 3d arrays were better :(
