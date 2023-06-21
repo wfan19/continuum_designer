@@ -6,9 +6,11 @@ n_segments = length(q_0) / 2;
 
 % Create curvature sweep
 n_timestamps = 5;
-curvature_base = linspace(1, 1.2, n_timestamps);
+k_0 = 0.5;
+delta_k = 0.3;
+curvature_base = linspace(k_0, k_0 + delta_k, n_timestamps);
 qs = repmat(q_0, 1, n_timestamps);
-qs(2, :) = -curvature_base;
+qs(2, :) = 0;
 qs(4, :) = curvature_base;
 
 %%% Compute forward kinematics for each configuration vector, and then plot the results.
@@ -42,8 +44,7 @@ for joint = 1 : n_segments
         % Given the step in configuration, find the change in pose predicted by the jacobian
         q_i = qs(:, i);
         delta_q = qs(:, i+1) - qs(:, i);
-        TeLg = SE2.left_lifted_action(SE2.hat(arms(i).rods(joint).calc_posns()));
-        delta_g_world = TeLg * pcc_jacobian(arms(i), q_i, joint) * delta_q;
+        delta_g_world = pcc_jacobian(arms(i), q_i, joint) * delta_q;
 
         % Apply the transformation
         last_g_joint = g_joint_predicted(:, i);
