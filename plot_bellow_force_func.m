@@ -1,29 +1,38 @@
 psi_to_kpa = 6.89476;
 
-resolution = 10;
+resolution = 50;
 pressure_min = 0;
-pressure_max = 60 * psi_to_kpa;
+pressure_max = 90;
 pressures = linspace(pressure_min, pressure_max, resolution);
 
-strain_min = -0.4;
-strain_max = 0.1;
+strain_min = -0.5;
+strain_max = 0.05;
 strains = linspace(strain_min, strain_max, resolution);
 
-[P, S] = meshgrid(pressures, strains);
+[S, P] = meshgrid(strains, pressures);
 
-F = bellow_force_func(P, S);
+F = wrapped_gina_force_func(S, P);
 
 figure();
-contour_mat = contour(P, S, F, [0,0]);
+contour_mat = contour(S, P, F, [0,0]);
 free_contraction_line = contour_mat(:, 2:end);
 
 hold on
 plot3(free_contraction_line(1, :), free_contraction_line(2, :), zeros(1, length(free_contraction_line)), "r", linewidth=3)
-mesh(P, S, F);
+mesh(S, P, F);
 view(10,10)
 
+function F = wrapped_gina_force_func(S, P)
+    F = zeros(size(P));
+    for i = 1 : size(P, 1)
+        for j = 1 : size(P, 2)
+            F(i, j) = actuatorForce_key(S(i, j), P(i, j));
+        end
+    end
+    F = -F;
+end
 
-function F = bellow_force_func(P, S)
+function F = bellow_force_func(S, P)
     psi_to_kpa = 6.89476;
     P_psi = P / psi_to_kpa;
     f_neutral_length = @(p) 7e-7*p.^3 - 5e-5*p.^2 - 1e-3*p + 0.4282;
