@@ -12,7 +12,7 @@ g_0_muscles = {g_o*g_o_A; g_o; g_o*g_o_B};
 l_0 = 0.443; % Default length
 
 % Create arm object and initialize plotting
-planar_arm_obj = Arm2D(g_o, g_0_muscles, l_0, 'plot_unstrained', true);
+planar_arm_obj = Arm2D(g_o, g_0_muscles, l_0, 'plot_unstrained', false);
 planar_arm_obj.rho = rho;
 
 fig = figure();
@@ -37,12 +37,17 @@ f_force_outer = @(strain, pressure) actuatorForce_key(strain, pressure);
 f_force_inner = @(strain, pressure) -actuatorForce_key(strain, pressure);
 force_funcs = {f_force_outer, f_force_inner, f_force_outer};
 
-pressures = [50, 0, 0];
+pressures = [30, 0, 0];
 A = [
     1 1 1;
     rho, 0, -rho;
 ];
 check_equilibrium(test_h_tilde, planar_arm_obj, force_funcs, pressures, l_0, A);
+
+f_equilibrium = @(h_o_tilde) check_equilibrium(h_o_tilde, planar_arm_obj, force_funcs, pressures, l_0, A);
+equilibrium_soln = fsolve(f_equilibrium, [l_0; 0; 0]);
+
+planar_arm_obj.update_arm(v_l_0, equilibrium_soln);
 
 function residuals = check_equilibrium(h_o_tilde, arm_obj, force_funcs, pressures, l_0, A)
     forces = zeros(length(force_funcs), 1);
