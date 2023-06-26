@@ -29,5 +29,32 @@ ylim(planar_arm_obj.ax, [0, 1] * border_length_cm / 100);
 xlim(planar_arm_obj.ax, [-0.5, 0.5] * border_length_cm / 100);
 
 v_l_0 = l_0 * ones(length(g_0_muscles), 1);
-test_h_tilde = [l_0 * 0.9; 0; 0.5];
+test_h_tilde = [l_0 * 0.9; 0; 0.5]; 
 planar_arm_obj.update_arm(v_l_0, test_h_tilde);
+
+%% Solve the statics of the 3-muscle arm
+f_force_outer = @(strain, pressure) actuatorForce_key(strain, pressure);
+f_force_inner = @(strain, pressure) -actuatorForce_key(strain, pressure);
+force_funcs = {f_force_outer, f_force_inner, f_force_outer};
+
+pressures = [50, 0, 0];
+A = [
+    1 1 1;
+    rho, 0, -rho;
+];
+check_equilibrium(test_h_tilde, planar_arm_obj, force_funcs, pressures, l_0, A);
+
+function residuals = check_equilibrium(h_o_tilde, arm_obj, force_funcs, pressures, l_0, A)
+    forces = zeros(length(force_funcs), 1);
+
+    v_l_0 = l_0 * ones(length(arm_obj.muscles), 1);
+    arm_obj.update_arm(v_l_0, h_o_tilde);
+
+    for i = 1 : length(force_funcs)
+        h_i_tilde = arm_obj.muscles(i).h_tilde;
+        epsilon_i = (h_i_tilde(1) - l_0) / l_0;
+
+        forces(i) = force_funcs{i}(epsilon_i, pressures(i));
+    end
+    residuals = A * forces;
+end
