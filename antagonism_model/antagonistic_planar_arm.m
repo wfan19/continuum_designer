@@ -30,7 +30,7 @@ xlim(planar_arm_obj.ax, [-0.5, 0.5] * border_length_cm / 100);
 
 v_l_0 = l_0 * ones(length(g_0_muscles), 1);
 test_h_tilde = [l_0 * 0.9; 0; 0.5]; 
-planar_arm_obj.update_arm(v_l_0, test_h_tilde);
+planar_arm_obj.update_arm(test_h_tilde);
 
 %% Solve the statics of the 3-muscle arm
 f_force_outer = @(strain, pressure) actuatorForce_key(strain, pressure);
@@ -47,13 +47,12 @@ check_equilibrium(test_h_tilde, planar_arm_obj, force_funcs, pressures, l_0, A);
 f_equilibrium = @(h_o_tilde) check_equilibrium(h_o_tilde, planar_arm_obj, force_funcs, pressures, l_0, A);
 equilibrium_soln = fsolve(f_equilibrium, [l_0; 0; 0]);
 
-planar_arm_obj.update_arm(v_l_0, equilibrium_soln);
+planar_arm_obj.update_arm(equilibrium_soln);
 
 function residuals = check_equilibrium(h_o_tilde, arm_obj, force_funcs, pressures, l_0, A)
     forces = zeros(length(force_funcs), 1);
 
-    v_l_0 = l_0 * ones(length(arm_obj.muscles), 1);
-    arm_obj.update_arm(v_l_0, h_o_tilde);
+    arm_obj.update_arm(h_o_tilde);
 
     for i = 1 : length(force_funcs)
         h_i_tilde = arm_obj.muscles(i).h_tilde;
