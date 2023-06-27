@@ -14,12 +14,12 @@ g_o_B = SE2.hat([0, -rho, 0]);
 g_o_i_muscles = {g_o_A; g_o_o; g_o_B};
 
 g_0_o = SE2.hat([0, 0, pi/2]);
-g_0_muscles = lmatmul_cell(g_0_o, g_o_i_muscles);
+g_0_muscles = lmatmul_cell(g_0_o, g_o_i_muscles); % g_i(0) = g_o(0) * g_oi
 
 l_0_full = 0.443; % Default length
 l_0_seg = l_0_full / N_segments;
 
-arms{1} = Arm2D(g_o, g_0_muscles, l_0_seg, 'plot_unstrained', false);
+arms{1} = Arm2D(g_0_o, g_0_muscles, l_0_seg, 'plot_unstrained', false);
 arms{1}.rho = rho;
 arms{1}.n_spacers = 2;
 
