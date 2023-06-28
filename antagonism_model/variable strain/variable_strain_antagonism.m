@@ -2,7 +2,7 @@
 
 %%% Define the geometry of an individual segment
 % Create the base segment
-N_segments = 3;
+N_segments = 12;
 l_0_full = 0.5; % Default length
 
 rho = 1 * 0.0254; % Define inter-muscle geometry
@@ -23,11 +23,11 @@ s = linspace(0, 1, N_segments+1);
 arm = variable_strain_segment(N_segments, base_segment);
 
 % Test setting the twist vectors along the rod
-% g_circ_right = zeros(3, N_segments);
-% s = linspace(0, 1, N_segments);
-% g_circ_right(1, :) = linspace(l_0_seg, 1.5*l_0_seg, N_segments);
-% g_circ_right(3, :) = 0.5 * s - 0.8;
-% arm.set_base_curve(g_circ_right)
+g_circ_right = zeros(3, N_segments);
+s = linspace(0, 1, N_segments);
+g_circ_right(1, :) = 0.2*s + l_0_full;
+g_circ_right(3, :) = 4*s-2;
+arm.set_base_curve(g_circ_right)
 
 %%% Plot the arm
 ax = axes(figure());

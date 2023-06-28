@@ -46,6 +46,7 @@ classdef variable_strain_segment
                     muscle_j.g_0 = obj.arms{i+1}.g_o * muscle_j.g_o_i;
                 end
             end
+            obj.arms{end}.set_base_curve(g_circ_right(:, end));
         end
         
         function plot(obj, ax)
