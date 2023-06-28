@@ -8,27 +8,27 @@ classdef variable_strain_segment
     
     methods
         function obj = variable_strain_segment(N_segments, base_arm_obj)
-            %VARIABLE_STRAIN_SEGMENT Construct an instance of this class
-            %   Detailed explanation goes here
-            obj.arms = cell(1, N_segments);
-            obj.arms{1} = base_arm_obj;
-
-            l_0_full = 0.443; % Default length
-            l_0_seg = l_0_full / N_segments;
-
-            % Now create N-segments based on this initial segment
-            for i = 1 : N_segments - 1
-                % The starting pose of the next arm is the tip pose of the
-                % current arm.
-                g_tip_i = SE2.hat(obj.arms{i}.muscle_o.calc_posns());
-                obj.arms{i+1} = Arm2D( ...
-                    g_tip_i, base_arm_obj.g_o_muscles, l_0_seg, 'plot_unstrained', false ...
-                );
-
-                % Copy over properties...
-                obj.arms{i+1}.rho = base_arm_obj.rho;
-                obj.arms{i+1}.n_spacers = base_arm_obj.n_spacers;
+            % Create individual segment object: same as the overall arm but
+            % each segment only integrates 1/N
+            ds = 1/N_segments;
+            segment_arm = copy(base_arm_obj);
+            segment_arm.muscle_o.max_s = ds;
+            for i = 1 : length(segment_arm.muscles)
+                segment_arm.muscles(i).max_s = ds;
             end
+
+            % Create a list of individiual segment objects
+            obj.arms = cell(1, N_segments);
+            for i = 1 : length(obj.arms)
+                obj.arms{i} = copy(segment_arm);
+            end
+
+            % Set the arm into a straight neutral config
+            % This also places the segments where they should go.
+            l_0_full = base_arm_obj.muscle_o.l;
+            neutral_base_curve = zeros(3, N_segments);
+            neutral_base_curve(1, :) = l_0_full;
+            obj.set_base_curve(neutral_base_curve);
         end
 
         function set_base_curve(obj, g_circ_right)
