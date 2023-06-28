@@ -19,7 +19,6 @@ base_segment.rho = rho;
 base_segment.n_spacers = 2;
 
 % Create the discretized variable strain arm
-s = linspace(0, 1, N_segments+1);
 arm = variable_strain_segment(N_segments, base_segment);
 
 % Test setting the twist vectors along the rod
@@ -35,6 +34,3 @@ border_length_cm = 45;
 ylim(ax, [0, 1] * border_length_cm / 100);
 xlim(ax, [-0.5, 0.5] * border_length_cm / 100);
 arm.plot(ax)
-
-%%% Solve the static equilibrium at each point
-disp("TODO")
