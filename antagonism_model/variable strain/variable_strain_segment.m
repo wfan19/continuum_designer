@@ -18,26 +18,31 @@ classdef variable_strain_segment
 
             % Now create N-segments based on this initial segment
             for i = 1 : N_segments - 1
+                % The starting pose of the next arm is the tip pose of the
+                % current arm.
                 g_tip_i = SE2.hat(obj.arms{i}.muscle_o.calc_posns());
-                g_o_i = obj.arms{i}.g_o;
-                tform_along_i = inv(g_o_i) * g_tip_i;
-                g_0_muscles_i = {obj.arms{i}.muscles.g_0};
-                
-                g_o_next = obj.arms{i}.g_o * tform_along_i;
-                g_0_muscles_next = rmatmul_cell(g_0_muscles_i, tform_along_i);
-            
-                obj.arms{i+1} = Arm2D(g_o_next, g_0_muscles_next, l_0_seg, 'plot_unstrained', false);
+                obj.arms{i+1} = Arm2D( ...
+                    g_tip_i, base_arm_obj.g_o_muscles, l_0_seg, 'plot_unstrained', false ...
+                );
+
+                % Copy over properties...
                 obj.arms{i+1}.rho = base_arm_obj.rho;
                 obj.arms{i+1}.n_spacers = base_arm_obj.n_spacers;
             end
         end
         
-        function plot(obj)
-            ax = axes(figure());
-
+        function plot(obj, ax)
+            arguments
+                obj
+                ax = axes(figure());
+            end
             for i = 1 : length(obj.arms)
                 obj.arms{i}.plot_arm(ax);
             end
+        end
+
+        function g_tip = get_tip_pose(obj)
+            g_tip = SE2.hat(obj.arms{end}.muscle_o.calc_posns());
         end
     end
 end
