@@ -19,33 +19,21 @@ base_segment = Arm2D(g_0_o, g_o_muscles, l_0_seg, 'plot_unstrained', false);
 base_segment.rho = rho;
 base_segment.n_spacers = 2;
 
-% Initialize plotting for the first segment
-ax = axes(figure());
-line_options_muscles = struct("LineWidth", 3);
-line_options_spacers = struct("Linewidth", 2.5);
-line_options_base_curve = struct("Linestyle", ":");
-
 % Create the discretized variable strain arm
 s = linspace(0, 1, N_segments+1);
 arm = variable_strain_segment(N_segments, base_segment);
 
-% Plotting
+% Test setting the twist vectors along the rod
+g_circ_right = zeros(3, N_segments);
+g_circ_right(1, :) = [0.4, 0.45, 0.5]/ 3;
+g_circ_right(3, :) = [0.1, 0.2, 0.3];
+arm.set_base_curve(g_circ_right)
+
+%%% Plot the arm
+ax = axes(figure());
 border_length_cm = 45;
 ylim(ax, [0, 1] * border_length_cm / 100);
 xlim(ax, [-0.5, 0.5] * border_length_cm / 100);
-
-arm.plot(ax)
-
-% Test setting the twist vectors along the rod
-g_circ_right = zeros(3, N_segments);
-g_circ_right(1, :) = linspace(l_0_seg, l_0_seg * 1.2, N_segments);
-g_circ_right(3, :) = linspace(0, -0.3, N_segments);
-for i = 1 : length(arm.arms) - 1
-    arm.arms{i}.muscle_o.h_tilde = g_circ_right(:, i);
-    arm.arms{i+1}.g_o = SE2.hat(arm.arms{i}.muscle_o.calc_posns());
-    % Now transform the other muscles...
-end
-
 arm.plot(ax)
 
 %%% Solve the static equilibrium at each point
