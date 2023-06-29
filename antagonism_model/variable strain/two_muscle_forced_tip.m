@@ -1,14 +1,14 @@
 %% Solve the statics of a 3-muscle antagonistic arm under variable strain.
 %%% Define the geometry of an individual segment
 % Create the base segment
-N_segments = 10;
+N_segments = 5;
 l_0 = 0.5; % Default length
 
 rho = 1 * 0.0254; % Define inter-muscle geometry
 g_o_A = SE2.hat([0, rho, 0]);
 g_o_o = eye(3);
 g_o_B = SE2.hat([0, -rho, 0]);
-g_o_muscles = {g_o_A; g_o_o; g_o_B};
+g_o_muscles = {g_o_A; g_o_B};
 
 g_0_o = SE2.hat([0, 0, pi/2]);
 g_0_muscles = lmatmul_cell(g_0_o, g_o_muscles); % g_i(0) = g_o(0) * g_oi
@@ -24,12 +24,12 @@ arm = variable_strain_segment(N_segments, base_segment);
 %% Solve the statics of the 3-muscle arm
 f_force_outer = @(strain, pressure) actuatorForce_key(strain, pressure);
 f_force_inner = @(strain, pressure) actuatorForce_key(strain, pressure);
-force_funcs = {f_force_outer, f_force_inner, f_force_outer};
+force_funcs = {f_force_outer, f_force_outer};
 
-pressures = [0, 0, 0];
+pressures = [30, 0, 0];
 A = [
-    1 1 1;
-    rho, 0, -rho;
+    1, 1;
+    rho, -rho;
 ];
 
 Q = [-1; 0; 0];
@@ -37,7 +37,8 @@ Q = [-1; 0; 0];
 g_circ_right_initial = zeros(3, N_segments);
 g_circ_right_initial(1, :) = l_0;
 f_equilibrium = @(v_g_circ_right) check_equilibrium_with_shear(v_g_circ_right, Q, arm, force_funcs, pressures, l_0, A);
-equilibrium_soln = fsolve(f_equilibrium, g_circ_right_initial);
+equilibrium_soln = fsolve(f_equilibrium, g_circ_right_initial(:));
+equilibrium_soln = reshape(equilibrium_soln, [3, N_segments]);
 
 % g_circ_right_initial = zeros(2, N_segments);
 % g_circ_right_initial(1, :) = l_0;
@@ -54,9 +55,6 @@ border_length_cm = 45;
 ylim(ax, [0, 1] * border_length_cm / 100);
 xlim(ax, [-0.5, 0.5] * border_length_cm / 100);
 arm.plot(ax);
-%%
-check_equilibrium_with_shear(equilibrium_soln, Q, arm, force_funcs, pressures, l_0, A)
-check_equilibrium_with_shear(equilibrium_soln, -Q, arm, force_funcs, pressures, l_0, A)
 
 function v_residuals = check_equilibrium_with_shear(v_g_circ_right, Q, arm_obj, force_funcs, pressures, l_0, A)
     N_segments = length(arm_obj.arms);
@@ -71,7 +69,7 @@ function v_residuals = check_equilibrium_with_shear(v_g_circ_right, Q, arm_obj, 
         % Compute current position, and distance vector to end point
         g_i = arm_i.g_o;
         g_end = arm_obj.get_tip_pose();
-        delta_g_i = g_end * inv(g_i);
+        delta_g_i = inv(g_i) * g_end;
         r_i = SE2.translation(delta_g_i);
         r_i = [r_i(1); r_i(2); 0];
 
@@ -87,10 +85,11 @@ function v_residuals = check_equilibrium_with_shear(v_g_circ_right, Q, arm_obj, 
         residuals_i = A * forces_i;
 
         residuals_i(1) = residuals_i(1) + dot(Q(1:2), g_i(1:2, 1));
-        residuals_i(3) = g_circ_right(2, i);
 
-        moment_from_Qf = [0, 0, 1] * cross(r_i, diag([1, 1, 0]) * Q);
+        moment_from_Qf = norm(cross(r_i, diag([1, 1, 0]) * Q));
         residuals_i(2) = moment_from_Qf + residuals_i(2) + Q(3);
+
+        residuals_i(3) = g_circ_right(2, i);
 
         mat_residuals(:, i) = residuals_i;
     end

@@ -18,7 +18,7 @@ classdef variable_strain_segment
             end
 
             % Create a list of individiual segment objects
-            obj.arms = cell(1, N_segments);
+            obj.arms = cell(1, N_segments); 
             for i = 1 : length(obj.arms)
                 obj.arms{i} = copy(segment_arm);
             end
@@ -47,6 +47,14 @@ classdef variable_strain_segment
                 end
             end
             obj.arms{end}.set_base_curve(g_circ_right(:, end));
+        end
+
+        function g_circ_right = get_base_curve(obj)
+            g_circ_right = zeros(3, length(obj.arms));
+
+            for i = 1 : length(obj.arms)
+                g_circ_right(:, i) = obj.arms{i}.muscle_o.h_tilde;
+            end
         end
         
         function plot(obj, ax)
