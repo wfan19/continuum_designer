@@ -30,7 +30,7 @@ f_force_inner = @(strain, pressure) actuatorForce_key(strain, pressure);
 force_funcs = {fitresult, @actuatorForce_key, @actuatorForce_key, fitresult};
 
 % Define the scenario
-pressures = [0, 40, 0, 20];
+pressures = [0, 40, 0, 0];
 Q = [0; -1; 0];
 
 % Initialize the problem
@@ -65,7 +65,7 @@ function v_residuals = check_equilibrium_with_shear(v_g_circ_right, Q, arm_obj, 
     g_circ_right = reshape(v_g_circ_right, [3, N_segments]);
     arm_obj.set_base_curve(g_circ_right);
 
-    reaction_forces = calc_reaction_forces(arm_obj, Q);
+    reaction_forces = arm_obj.calc_reaction_forces(Q);
 
     internal_forces = zeros(3, N_segments);
     for i = 1 : N_segments
