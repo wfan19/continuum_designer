@@ -3,7 +3,7 @@
 % Passive compression plane
 p0 = [0; 0; 0];
 p1 = [-0.142; 0; 1.1];    % Passive compression
-p2 = [0; 20; 10];         % Force when inflated and length unchanged
+p2 = [0; 70; 100];         % Force when inflated and length unchanged
 p3 = [0.50; 20; 0];       % Free extension line
 p4 = [0.142; 0; -3];      % Passive extension
 
