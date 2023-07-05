@@ -5,10 +5,11 @@ N_segments = 10;
 l_0 = 0.5; % Default length
 
 rho = 1 * 0.0254; % Define inter-muscle geometry
-g_o_A = SE2.hat([0, rho, 0]);
-g_o_o = eye(3);
-g_o_B = SE2.hat([0, -rho, 0]);
-g_o_muscles = {g_o_A; g_o_o; g_o_B};
+g_o_X = SE2.hat([0, rho, 0]);
+g_o_A = SE2.hat([0, rho * 1/3, 0]);
+g_o_B = SE2.hat([0, -rho * 1/3, 0]);
+g_o_Y = SE2.hat([0, -rho, 0]);
+g_o_muscles = {g_o_X; g_o_A; g_o_B; g_o_Y};
 
 g_0_o = SE2.hat([0, 0, -pi/2]);
 g_0_muscles = lmatmul_cell(g_0_o, g_o_muscles); % g_i(0) = g_o(0) * g_oi
@@ -24,21 +25,25 @@ arm = variable_strain_segment(N_segments, base_segment);
 %% Solve the statics of the 3-muscle arm
 f_force_outer = @(strain, pressure) actuatorForce_key(strain, pressure);
 f_force_inner = @(strain, pressure) actuatorForce_key(strain, pressure);
-force_funcs = {f_force_outer, f_force_inner, f_force_outer};
+force_funcs = {fitresult, @actuatorForce_key, @actuatorForce_key, fitresult};
 
-pressures = [0, 0, 0];
+pressures = [0, 40, 0, 10];
 A = [
-    1, 1, 1;
-    0, 0, 0;
-    rho, 0, -rho;
+    1, 1, 1, 1;
+    0, 0, 0, 0;
+    rho, rho*2/3, -rho*2/3, -rho;
 ];
 
-Q = [1; 0; 0];
+Q = [0; -1; 0];
 
 g_circ_right_initial = zeros(3, N_segments);
 g_circ_right_initial(1, :) = l_0;
 f_equilibrium = @(v_g_circ_right) check_equilibrium_with_shear(v_g_circ_right, Q, arm, force_funcs, pressures, l_0, A);
-equilibrium_soln = fsolve(f_equilibrium, g_circ_right_initial);
+options = optimoptions('fsolve',"MaxFunctionEvaluations", 1e5);
+equilibrium_soln = fsolve(f_equilibrium, g_circ_right_initial, options);
+
+disp("Final residuals: ")
+disp(f_equilibrium(equilibrium_soln));
 
 arm.set_base_curve(equilibrium_soln);
 
