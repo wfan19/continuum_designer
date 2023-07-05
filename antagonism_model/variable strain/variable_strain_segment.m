@@ -4,6 +4,7 @@ classdef variable_strain_segment
     
     properties
         arms
+        l_0 = 1;
     end
     
     methods
@@ -29,6 +30,7 @@ classdef variable_strain_segment
             neutral_base_curve = zeros(3, N_segments);
             neutral_base_curve(1, :) = l_0_full;
             obj.set_base_curve(neutral_base_curve);
+            obj.l_0 = l_0_full;
         end
 
         function set_base_curve(obj, g_circ_right)
@@ -73,6 +75,46 @@ classdef variable_strain_segment
                 mat_reactions(:, i) = Q_right_circ_i;
             end
         end
+
+        function internal_forces = calc_internal_forces(obj, pressures, force_funcs)
+            N_segments = length(obj.arms);
+            internal_forces = zeros(3, N_segments);
+            for i = 1 : N_segments
+                segment = obj.arms{i};
+                N_muscles = length(segment.muscles);
+                forces_i = zeros(N_muscles, 1);
+        
+                % Find the strain and thus corresponding force in each muscle
+                for j = 1 : N_muscles
+                    muscle_j = segment.muscles(j);
+                    epsilon_j = (muscle_j.l - obj.l_0) / obj.l_0;
+                    forces_i(j) = force_funcs{j}(epsilon_j, pressures(j));
+                end
+        
+                % Use the segment geometry to build the equilibrium matrix
+                % TODO: this should be part of an arm or segment?
+                g_o_muscles = {segment.muscles.g_o_i};
+                t_o_muscles = cell2mat(cellfun(@(mat) SE2.translation(mat), g_o_muscles, "uniformoutput", false));
+                dy_o_muscles = t_o_muscles(2, :);
+                A = zeros(3, N_muscles);
+                A(1, :) = 1;
+                A(3, :) = dy_o_muscles;
+        
+                % Calculate the total internal force vector
+                internal_forces(:, i) = A * forces_i;
+            end
+        end
+
+        function v_residuals = check_equilibrium(obj, g_circ_right, Q, pressures, force_funcs)
+            obj.set_base_curve(g_circ_right);
+        
+            reaction_forces = obj.calc_reaction_forces(Q);
+            internal_forces = obj.calc_internal_forces(pressures, force_funcs);
+        
+            mat_residuals = internal_forces + reaction_forces;
+            mat_residuals(2, :) = g_circ_right(2, :);
+            v_residuals = mat_residuals(:);
+        end
         
         function plot(obj, ax)
             arguments
@@ -86,6 +128,13 @@ classdef variable_strain_segment
 
         function g_tip = get_tip_pose(obj)
             g_tip = SE2.hat(obj.arms{end}.muscle_o.calc_posns());
+        end
+
+        function neutral_base_curve = get_neutral_base_curve(obj)
+            % Get the matrix of g_circ_right at the arm's neutral state.
+            N_segments = length(obj.arms);
+            neutral_base_curve = zeros(3, N_segments);
+            neutral_base_curve(1, :) = obj.l_0;
         end
     end
 end

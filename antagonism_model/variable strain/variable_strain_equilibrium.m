@@ -34,19 +34,18 @@ pressures = [0, 40, 0, 0];
 Q = [0; -1; 0];
 
 % Initialize the problem
-g_circ_right_initial = zeros(3, N_segments);
-g_circ_right_initial(1, :) = l_0;
-f_equilibrium = @(v_g_circ_right) check_equilibrium_with_shear(v_g_circ_right, Q, arm, force_funcs, pressures, l_0);
+g_circ_right_initial = arm.get_neutral_base_curve();
+f_equilibrium = @(v_g_circ_right) arm.check_equilibrium(v_g_circ_right, Q, pressures, force_funcs);
 options = optimoptions('fsolve',"MaxFunctionEvaluations", 1e5);
 
-tic
+profile("on")
 equilibrium_soln = fsolve(f_equilibrium, g_circ_right_initial, options);
-toc
+arm.set_base_curve(equilibrium_soln);
+profile("off")
+profile("view")
 
 disp("Final residuals: ")
 disp(f_equilibrium(equilibrium_soln));
-
-arm.set_base_curve(equilibrium_soln);
 
 %% Plot the arm
 ax = axes(figure());
@@ -59,41 +58,3 @@ arm.plot(ax);
 xy = SE2.translation(arm.get_tip_pose());
 uv = Q(1:2) * l_0/10;
 quiver(xy(1), xy(2), uv(1), uv(2), "off", "linewidth", 3, "MaxHeadSize", 1);
-
-function v_residuals = check_equilibrium_with_shear(v_g_circ_right, Q, arm_obj, force_funcs, pressures, l_0)
-    N_segments = length(arm_obj.arms);
-    g_circ_right = reshape(v_g_circ_right, [3, N_segments]);
-    arm_obj.set_base_curve(g_circ_right);
-
-    reaction_forces = arm_obj.calc_reaction_forces(Q);
-
-    internal_forces = zeros(3, N_segments);
-    for i = 1 : N_segments
-        segment = arm_obj.arms{i};
-        N_muscles = length(segment.muscles);
-        forces_i = zeros(N_muscles, 1);
-
-        % Find the strain and thus corresponding force in each muscle
-        for j = 1 : N_muscles
-            muscle_j = segment.muscles(j);
-            epsilon_j = (muscle_j.l - l_0) / l_0;
-            forces_i(j) = force_funcs{j}(epsilon_j, pressures(j));
-        end
-
-        % Use the segment geometry to build the equilibrium matrix
-        % TODO: this should be part of an arm or segment?
-        g_o_muscles = {segment.muscles.g_o_i};
-        t_o_muscles = cell2mat(cellfun(@(mat) SE2.translation(mat), g_o_muscles, "uniformoutput", false));
-        dy_o_muscles = t_o_muscles(2, :);
-        A = zeros(3, N_muscles);
-        A(1, :) = 1;
-        A(3, :) = dy_o_muscles;
-
-        % Calculate the total internal force vector
-        internal_forces(:, i) = A * forces_i;
-    end
-
-    mat_residuals = internal_forces + reaction_forces;
-    mat_residuals(2, :) = g_circ_right(2, :);
-    v_residuals = mat_residuals(:);
-end
