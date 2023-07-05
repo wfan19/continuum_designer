@@ -1,4 +1,4 @@
-classdef variable_strain_segment
+classdef variable_strain_segment < matlab.mixin.Copyable
     %VARIABLE_STRAIN_SEGMENT Summary of this class goes here
     %   Detailed explanation goes here
     
@@ -135,6 +135,21 @@ classdef variable_strain_segment
             N_segments = length(obj.arms);
             neutral_base_curve = zeros(3, N_segments);
             neutral_base_curve(1, :) = obj.l_0;
+        end
+    end
+
+    % Copy constructor
+    methods (Access = protected)
+
+        % Copy constructor
+        % Inherited from matlab.mixin.Copyable
+        function cp = copyElement(obj)
+            % Regular copy of all elements
+            cp = copyElement@matlab.mixin.Copyable(obj);
+            
+            for i = 1 : length(cp.arms)
+                cp.arms{i} = copy(obj.arms{i});
+            end
         end
     end
 end
