@@ -30,7 +30,7 @@ pressures = [0, 40, 0, 0];
 Q = [0; 0; 0];
 
 % Initialize the problem
-arm.solve_for_base_curve(pressures, Q);
+equilibrium_soln = arm.solve_for_base_curve(pressures, Q);
 
 %%% Plot the arm
 ax = axes(figure());
@@ -44,9 +44,51 @@ xy = SE2.translation(arm.get_tip_pose());
 uv = Q(1:2) * l_0/10;
 quiver(xy(1), xy(2), uv(1), uv(2), "off", "linewidth", 3, "MaxHeadSize", 1);
 
-% Save the base-curve for internal-force computations
+%% What actuator forces would produce the internal forces needed to maintain
+% this shape with a 40N load downward?
 g_circ_right_unloaded = equilibrium_soln;
+Q = [0; -40; 0];
+loaded_reaction_forces = arm.calc_reaction_forces(Q);
 
+%%% Utilize the fact the linearity of internal forces:
+% A * muscle_forces = internal_forces
+% Since we know A and internal_forces, this is a least squares problems
+% However, for a planar arm rank(A) = 2, but dim(muscle_forces) = N_muscles
+% so for N_muscles > 2 the system is underdetermined. Thus there's an
+% infinite family of solutions
+
+% Here we solve for a couple variants:
+
+% Least squared error solution
+muscle_forces_lstsq = arm.A \ loaded_reaction_forces;
+disp("Least squared error solution:")
+disp(muscle_forces_lstsq);
+
+% Minimum 2-norm solution
+muscle_forces_minnorm = lsqminnorm(arm.A, loaded_reaction_forces);
+disp("Minimum L2 norm solution:")
+disp(muscle_forces_minnorm);
+
+% Solve a constrained least squares such all muscle forces are within their
+% force bounds
+f_muscle_force = @(x) actuatorForce_key(x(1), x(2));
+muscle_force_min_config = fmincon(@(x) actuatorForce_key(x(1), x(2)), [0; 0], [], [], [], [], [-0.5; 0], [0.1; 100]);
+muscle_force_max_config = fmincon(@(x) -actuatorForce_key(x(1), x(2)), [0; 0], [], [], [], [], [-0.5; 0], [0.1; 100]);
+%muscle_force_min = f_muscle_force(muscle_force_min_config);
+%muscle_force_max = f_muscle_force(muscle_force_max_config);
+muscle_force_min = -40;
+muscle_force_max = 10;
+
+bellow_force_min = -10;
+bellow_force_max = 40;
+
+forces_min = [bellow_force_min; muscle_force_min; muscle_force_min; bellow_force_min];
+forces_max = [bellow_force_max; muscle_force_max; muscle_force_max; bellow_force_max];
+
+muscle_forces_lsqlin = lsqlin(arm.A, loaded_reaction_forces(:, 1), [], [], [], [], forces_min, forces_max);
+
+%% Ignore later code for now.
+%{
 %% Now apply a downward load to the arm
 arm_loaded = copy(arm);
 pressures = [0, 40, 0, 0];
@@ -106,3 +148,4 @@ arm_antagonism.plot(ax);
 xy = SE2.translation(arm_antagonism.get_tip_pose());
 uv = Q(1:2) * l_0/10;
 quiver(ax, xy(1), xy(2), uv(1), uv(2), "off", "linewidth", 3, "MaxHeadSize", 1);
+%}
