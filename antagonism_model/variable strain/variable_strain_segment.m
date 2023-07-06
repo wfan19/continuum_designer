@@ -146,13 +146,15 @@ classdef variable_strain_segment < matlab.mixin.Copyable
                 ax = axes(figure());
                 Q = [0; 0; 0]
             end
-            for i = 1 : length(obj.arms)
-                obj.arms{i}.plot_arm(ax);
-            end
-
+            hold(ax, "on");
             xy = SE2.translation(obj.get_tip_pose());
             uv = Q(1:2) * obj.l_0/10;
             quiver(ax, xy(1), xy(2), uv(1), uv(2), "off", "linewidth", 3, "MaxHeadSize", 1);
+            hold(ax, "off");
+
+            for i = 1 : length(obj.arms)
+                obj.arms{i}.plot_arm(ax);
+            end
         end
 
         function g_tip = get_tip_pose(obj)
