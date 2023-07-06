@@ -4,11 +4,14 @@ classdef variable_strain_segment < matlab.mixin.Copyable
     
     properties
         arms
+
         l_0 = 1;
+
+        force_funcs % Cell array of the force surface functions for each individual muscle
     end
     
     methods
-        function obj = variable_strain_segment(N_segments, base_arm_obj)
+        function obj = variable_strain_segment(N_segments, base_arm_obj, force_funcs)
             % Create individual segment object: same as the overall arm but
             % each segment only integrates 1/N
             ds = 1/N_segments;
@@ -31,6 +34,8 @@ classdef variable_strain_segment < matlab.mixin.Copyable
             neutral_base_curve(1, :) = l_0_full;
             obj.set_base_curve(neutral_base_curve);
             obj.l_0 = l_0_full;
+
+            obj.force_funcs = force_funcs;
         end
 
         function set_base_curve(obj, g_circ_right)
@@ -76,7 +81,7 @@ classdef variable_strain_segment < matlab.mixin.Copyable
             end
         end
 
-        function internal_forces = calc_internal_forces(obj, pressures, force_funcs)
+        function internal_forces = calc_internal_forces(obj, pressures)
             N_segments = length(obj.arms);
             internal_forces = zeros(3, N_segments);
             for i = 1 : N_segments
@@ -88,7 +93,7 @@ classdef variable_strain_segment < matlab.mixin.Copyable
                 for j = 1 : N_muscles
                     muscle_j = segment.muscles(j);
                     epsilon_j = (muscle_j.l - obj.l_0) / obj.l_0;
-                    forces_i(j) = force_funcs{j}(epsilon_j, pressures(j));
+                    forces_i(j) = obj.force_funcs{j}(epsilon_j, pressures(j));
                 end
         
                 % Use the segment geometry to build the equilibrium matrix
@@ -105,25 +110,44 @@ classdef variable_strain_segment < matlab.mixin.Copyable
             end
         end
 
-        function v_residuals = check_equilibrium(obj, g_circ_right, Q, pressures, force_funcs)
+        function v_residuals = check_equilibrium(obj, g_circ_right, Q, pressures)
             obj.set_base_curve(g_circ_right);
         
             reaction_forces = obj.calc_reaction_forces(Q);
-            internal_forces = obj.calc_internal_forces(pressures, force_funcs);
+            internal_forces = obj.calc_internal_forces(pressures);
         
             mat_residuals = internal_forces + reaction_forces;
             mat_residuals(2, :) = g_circ_right(2, :);
             v_residuals = mat_residuals(:);
         end
+
+        function equilibrium_soln = solve_for_base_curve(obj, pressures, Q)
+            arguments
+                obj
+                pressures
+                Q = [0; 0; 0]
+            end
+            g_circ_right_initial = obj.get_base_curve(); % Should this initialize from neutral, or from the last state? Should we make the obj stateless???
+            f_equilibrium = @(v_g_circ_right) obj.check_equilibrium(v_g_circ_right, Q, pressures);
+            options = optimoptions('fsolve',"MaxFunctionEvaluations", 1e5);
+            
+            equilibrium_soln = fsolve(f_equilibrium, g_circ_right_initial, options);
+            obj.set_base_curve(equilibrium_soln);
+        end
         
-        function plot(obj, ax)
+        function plot(obj, ax, Q)
             arguments
                 obj
                 ax = axes(figure());
+                Q = [0; 0; 0]
             end
             for i = 1 : length(obj.arms)
                 obj.arms{i}.plot_arm(ax);
             end
+
+            xy = SE2.translation(obj.get_tip_pose());
+            uv = Q(1:2) * obj.l_0/10;
+            quiver(ax, xy(1), xy(2), uv(1), uv(2), "off", "linewidth", 3, "MaxHeadSize", 1);
         end
 
         function g_tip = get_tip_pose(obj)
