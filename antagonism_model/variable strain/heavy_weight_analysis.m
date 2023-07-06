@@ -60,12 +60,12 @@ loaded_reaction_forces = arm.calc_reaction_forces(Q);
 % Here we solve for a couple variants:
 
 % Least squared error solution
-muscle_forces_lstsq = arm.A \ loaded_reaction_forces;
+muscle_forces_lstsq = arm.A \ -loaded_reaction_forces;
 disp("Least squared error solution:")
 disp(muscle_forces_lstsq);
 
 % Minimum 2-norm solution
-muscle_forces_minnorm = lsqminnorm(arm.A, loaded_reaction_forces);
+muscle_forces_minnorm = lsqminnorm(arm.A, -loaded_reaction_forces);
 disp("Minimum L2 norm solution:")
 disp(muscle_forces_minnorm);
 
@@ -85,7 +85,7 @@ bellow_force_max = 40;
 forces_min = [bellow_force_min; muscle_force_min; muscle_force_min; bellow_force_min];
 forces_max = [bellow_force_max; muscle_force_max; muscle_force_max; bellow_force_max];
 
-muscle_forces_lsqlin = lsqlin(arm.A, loaded_reaction_forces(:, 1), [], [], [], [], forces_min, forces_max);
+muscle_forces_lsqlin = lsqlin(arm.A, -loaded_reaction_forces(:, 1), [], [], [], [], forces_min, forces_max);
 
 %% Ignore later code for now.
 %{
