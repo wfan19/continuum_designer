@@ -8,6 +8,8 @@ classdef variable_strain_segment < matlab.mixin.Copyable
         l_0 = 1;
 
         force_funcs % Cell array of the force surface functions for each individual muscle
+
+        A
     end
     
     methods
@@ -26,6 +28,16 @@ classdef variable_strain_segment < matlab.mixin.Copyable
             for i = 1 : length(obj.arms)
                 obj.arms{i} = copy(segment_arm);
             end
+
+            % Create our A matrix
+            % TODO: This should eventually be per-segment
+            N_muscles = length(base_arm_obj.muscles);
+            g_o_muscles = base_arm_obj.g_o_muscles(:)'; % Ensure it's a row cell array
+            t_o_muscles = cell2mat(cellfun(@(mat) SE2.translation(mat), g_o_muscles, "uniformoutput", false));
+            dy_o_muscles = t_o_muscles(2, :);
+            obj.A = zeros(3, N_muscles);
+            obj.A(1, :) = 1;
+            obj.A(3, :) = dy_o_muscles;
 
             % Set the arm into a straight neutral config
             % This also places the segments where they should go.
@@ -96,21 +108,12 @@ classdef variable_strain_segment < matlab.mixin.Copyable
                     forces_i(j) = obj.force_funcs{j}(epsilon_j, pressures(j));
                 end
         
-                % Use the segment geometry to build the equilibrium matrix
-                % TODO: this should be part of an arm or segment?
-                g_o_muscles = {segment.muscles.g_o_i};
-                t_o_muscles = cell2mat(cellfun(@(mat) SE2.translation(mat), g_o_muscles, "uniformoutput", false));
-                dy_o_muscles = t_o_muscles(2, :);
-                A = zeros(3, N_muscles);
-                A(1, :) = 1;
-                A(3, :) = dy_o_muscles;
-        
                 % Calculate the total internal force vector
-                internal_forces(:, i) = A * forces_i;
+                internal_forces(:, i) = obj.A * forces_i;
             end
         end
 
-        function v_residuals = check_equilibrium(obj, g_circ_right, Q, pressures)
+        function mat_residuals = check_equilibrium(obj, g_circ_right, pressures, Q)
             obj.set_base_curve(g_circ_right);
         
             reaction_forces = obj.calc_reaction_forces(Q);
@@ -118,7 +121,6 @@ classdef variable_strain_segment < matlab.mixin.Copyable
         
             mat_residuals = internal_forces + reaction_forces;
             mat_residuals(2, :) = g_circ_right(2, :);
-            v_residuals = mat_residuals(:);
         end
 
         function equilibrium_soln = solve_for_base_curve(obj, pressures, Q)
@@ -128,11 +130,14 @@ classdef variable_strain_segment < matlab.mixin.Copyable
                 Q = [0; 0; 0]
             end
             g_circ_right_initial = obj.get_base_curve(); % Should this initialize from neutral, or from the last state? Should we make the obj stateless???
-            f_equilibrium = @(v_g_circ_right) obj.check_equilibrium(v_g_circ_right, Q, pressures);
+            f_equilibrium = @(g_circ_right) obj.check_equilibrium(g_circ_right, pressures, Q);
             options = optimoptions('fsolve',"MaxFunctionEvaluations", 1e5);
             
             equilibrium_soln = fsolve(f_equilibrium, g_circ_right_initial, options);
             obj.set_base_curve(equilibrium_soln);
+
+            disp("Solver residuals: ")
+            disp(f_equilibrium(equilibrium_soln))
         end
         
         function plot(obj, ax, Q)
@@ -159,6 +164,31 @@ classdef variable_strain_segment < matlab.mixin.Copyable
             N_segments = length(obj.arms);
             neutral_base_curve = zeros(3, N_segments);
             neutral_base_curve(1, :) = obj.l_0;
+        end
+
+        function mat_strains = get_muscle_strains(obj)
+            N_segments = length(obj.arms);
+            N_muscles = length(obj.arms{1}.muscles);
+            mat_strains = zeros(N_muscles, N_segments);
+
+            for i = 1 : N_segments
+                arm_i = obj.arms{i};
+                for j = 1 : N_muscles
+                    mat_strains(j, i) = (arm_i.muscles(j).l - obj.l_0) / obj.l_0;
+                end
+            end
+        end
+
+        function mat_forces = get_muscle_forces(obj, pressures)
+            mat_strains = obj.get_muscle_strains();
+            mat_forces = zeros(size(mat_strains));
+
+            N_muscles = length(obj.arms{1}.muscles);
+            for i = 1 : N_muscles
+                strains_i = mat_strains(i, :);
+                f_force = @(e) obj.force_funcs{i}(e, pressures(i));
+                mat_forces(i, :) = arrayfun(f_force, strains_i);
+            end
         end
     end
 
