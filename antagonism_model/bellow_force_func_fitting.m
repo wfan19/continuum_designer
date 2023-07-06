@@ -13,14 +13,9 @@ f_e = P(1, :);
 f_p = P(2, :);
 f_f = P(3, :);
 
-%% Fit: 'untitled fit 1'.
 [xData, yData, zData] = prepareSurfaceData( f_e, f_p, f_f );
 
-% Set up fittype and options.
-ft = 'cubicinterp';
-
-% Fit model to data.
-[fitresult, gof] = fit( [xData, yData], zData, ft, 'Normalize', 'on' );
+fitresult = make_bellow_force_func;
 
 % Plot fit with data.
 figure( 'Name', 'untitled fit 1' );
