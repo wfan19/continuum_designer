@@ -86,10 +86,13 @@ classdef variable_strain_segment < matlab.mixin.Copyable
                 g_i = segment.g_o;
                 g_i_tip = inv(g_i) * g_tip;        
         
-                Q_right_circ_tip = SE2.left_lifted_action(g_i)' * Q;
-                Q_right_circ_i = SE2.adjoint(g_i_tip)' * Q_right_circ_tip;
-        
-                mat_reactions(:, i) = Q_right_circ_i;
+                % Transform the force from a world-frame force Q to ..?
+                Q_right_circ_tip = SE2.left_lifted_action(g_tip)' * Q;
+
+                % Compute the left-force at the tip, which is the same as
+                % the left-force at the base.
+                Q_left_circ_i = inv(SE2.adjoint(g_i_tip))' * Q_right_circ_tip;
+                mat_reactions(:, i) = Q_left_circ_i;
             end
         end
 
