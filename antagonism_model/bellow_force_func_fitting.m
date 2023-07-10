@@ -1,21 +1,11 @@
-% Define keypoints
+[fitresult, X] = make_bellow_force_func;
 
-% Passive compression plane
-p0 = [0; 0; 0];
-p1 = [-0.142; 0; 1.1];    % Passive compression
-p2 = [0; 70; 100];         % Force when inflated and length unchanged
-p3 = [0.50; 20; 0];       % Free extension line
-p4 = [0.142; 0; -3];      % Passive extension
-
-P = [p0, p1, p2, p3, p4];
-
-f_e = P(1, :);
-f_p = P(2, :);
-f_f = P(3, :);
+f_e = X(1, :);
+f_p = X(2, :);
+f_f = X(3, :);
 
 [xData, yData, zData] = prepareSurfaceData( f_e, f_p, f_f );
 
-fitresult = make_bellow_force_func;
 
 % Plot fit with data.
 figure( 'Name', 'untitled fit 1' );
