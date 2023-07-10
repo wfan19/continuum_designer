@@ -32,12 +32,12 @@ classdef variable_strain_segment < matlab.mixin.Copyable
             % Create our A matrix
             % TODO: This should eventually be per-segment
             N_muscles = length(base_arm_obj.muscles);
-            g_o_muscles = base_arm_obj.g_o_muscles(:)'; % Ensure it's a row cell array
-            t_o_muscles = cell2mat(cellfun(@(mat) SE2.translation(mat), g_o_muscles, "uniformoutput", false));
-            dy_o_muscles = t_o_muscles(2, :);
             obj.A = zeros(3, N_muscles);
-            obj.A(1, :) = 1;
-            obj.A(3, :) = dy_o_muscles;
+            g_o_muscles = base_arm_obj.g_o_muscles(:)'; % Ensure it's a row cell array
+            for i = 1 : length(g_o_muscles)
+                g_o_muscle_i = g_o_muscles{i};
+                obj.A(:, i) = transpose(inv(SE2.adjoint(g_o_muscle_i))) * [1; 0; 0];
+            end
 
             % Set the arm into a straight neutral config
             % This also places the segments where they should go.
@@ -93,6 +93,18 @@ classdef variable_strain_segment < matlab.mixin.Copyable
                 % the left-force at the base.
                 Q_left_circ_i = inv(SE2.adjoint(g_i_tip))' * Q_right_circ_tip;
                 mat_reactions(:, i) = Q_left_circ_i;
+
+                % Gina's formulation
+                %{
+                reaction_i = zeros(3, 1);
+                r_i = SE2.translation(g_tip) - SE2.translation(g_i);
+                r_i_body = SE2.translation(inv(g_i) * g_tip);
+                moment_from_Qf = [0, 0, 1] * cross([r_i; 0], diag([1, 1, 0]) * Q);
+
+                reaction_i(1:2) = g_i(1:2, 1:2)' * Q(1:2);
+                reaction_i(3) = moment_from_Qf + Q(3);
+                mat_reactions(:, i) = reaction_i;
+                %}
             end
         end
 
