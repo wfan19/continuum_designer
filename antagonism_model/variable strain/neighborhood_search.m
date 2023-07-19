@@ -37,9 +37,42 @@ arm.plot(ax);
 %% Solve inverse mechanics for the unloaded arm: what are the pressures that get us to this shape?
 % Method 1: just call an optimization routine?
 % - Method 1a: minimize tip pose error
-Q = [0; 0; 0];
-f_tip_error = @(pressures) tip_error(arm, g_tip_goal, Q, pressures);
-pressures_optim = fmincon(f_tip_error, [10; 0], [], [], [], [], [0; 0], [100; 100]);
+% Build the error function
+Q = [0; -40; 0];
+f_tip_error = @(pressures) tip_error(arm, g_tip_goal, Q, pressures); 
+
+% TODO: Read Gina's Biomimetics & Bioinspiration
+
+%% Do a stupid sweep of pressures - how nonconvex is our searchsapce?
+N = 30;
+p1 = linspace(0, 100, N);
+p2 = linspace(0, 100, N);
+
+[P1, P2] = meshgrid(p1, p2);
+errors = zeros(N, N);
+for i = 1 : N
+    for j = 1 : N
+        errors(i, j) = f_tip_error([P1(i, j); P2(i, j)]);
+    end
+end
+
+%% Plot the results of the sweep
+figure()
+surf(P1, P2, errors);
+xlabel("Pressure 1 (red)")
+ylabel("Pressure 2 (blue)")
+zlabel("Tip pose error")
+
+% Plot the gradients too
+figure()
+[dP1, dP2] = gradient(errors, 0.2);
+quiver(P1, P2, dP1, dP2);
+xlabel("Pressure 1 (red)")
+ylabel("Pressure 2 (blue)")
+
+%%
+options = optimoptions("fmincon", "DiffMinChange", 0.1);
+pressures_optim = fmincon(f_tip_error, [30; 0], [], [], [], [], [0; 0], [100; 100]);
 
 %% Now load the arm - how does the shape change?
 Q = [0; -5; 0];
