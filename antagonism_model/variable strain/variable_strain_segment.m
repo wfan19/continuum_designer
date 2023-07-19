@@ -108,24 +108,42 @@ classdef variable_strain_segment < matlab.mixin.Copyable
             end
         end
 
-        function internal_forces = calc_internal_forces(obj, pressures)
+        function mat_strains = get_muscle_strains(obj, pressures)
             N_segments = length(obj.arms);
-            internal_forces = zeros(3, N_segments);
+            N_muscles = length(obj.arms{1}.muscles);
+            mat_strains = zeros(N_muscles, N_segments);
+
             for i = 1 : N_segments
-                segment = obj.arms{i};
-                N_muscles = length(segment.muscles);
-                forces_i = zeros(N_muscles, 1);
-        
-                % Find the strain and thus corresponding force in each muscle
+                arm_i = obj.arms{i};
                 for j = 1 : N_muscles
-                    muscle_j = segment.muscles(j);
-                    epsilon_j = (muscle_j.l - obj.l_0) / obj.l_0;
-                    forces_i(j) = obj.force_funcs{j}(epsilon_j, pressures(j));
+                    % Solve for the muscle's free-contraction length
+                    forcefunc_j = obj.force_funcs{j};
+                    options = optimset("Display", "off");
+                    neutral_strain = fsolve(@(strain) forcefunc_j(strain, pressures(j)), 0, options);
+                    free_contraction_length = obj.l_0 * (1 + neutral_strain);
+
+                    % I think strain should be calculated from
+                    % free-contraction length, not neutral length?
+                    mat_strains(j, i) = (arm_i.muscles(j).l - obj.l_0) / obj.l_0;
                 end
-        
-                % Calculate the total internal force vector
-                internal_forces(:, i) = obj.A * forces_i;
             end
+        end
+
+        function mat_forces = get_muscle_forces(obj, pressures)
+            mat_strains = obj.get_muscle_strains(pressures);
+            mat_forces = zeros(size(mat_strains));
+
+            N_muscles = length(obj.arms{1}.muscles);
+            for i = 1 : N_muscles
+                strains_i = mat_strains(i, :);
+                f_force = @(e) obj.force_funcs{i}(e, pressures(i));
+                mat_forces(i, :) = arrayfun(f_force, strains_i);
+            end
+        end
+
+        function internal_forces = calc_internal_forces(obj, pressures)
+            muscle_forces = obj.get_muscle_forces(pressures);
+            internal_forces = obj.A * muscle_forces;
         end
 
         function mat_residuals = check_equilibrium(obj, g_circ_right, pressures, Q)
@@ -181,31 +199,6 @@ classdef variable_strain_segment < matlab.mixin.Copyable
             N_segments = length(obj.arms);
             neutral_base_curve = zeros(3, N_segments);
             neutral_base_curve(1, :) = obj.l_0;
-        end
-
-        function mat_strains = get_muscle_strains(obj)
-            N_segments = length(obj.arms);
-            N_muscles = length(obj.arms{1}.muscles);
-            mat_strains = zeros(N_muscles, N_segments);
-
-            for i = 1 : N_segments
-                arm_i = obj.arms{i};
-                for j = 1 : N_muscles
-                    mat_strains(j, i) = (arm_i.muscles(j).l - obj.l_0) / obj.l_0;
-                end
-            end
-        end
-
-        function mat_forces = get_muscle_forces(obj, pressures)
-            mat_strains = obj.get_muscle_strains();
-            mat_forces = zeros(size(mat_strains));
-
-            N_muscles = length(obj.arms{1}.muscles);
-            for i = 1 : N_muscles
-                strains_i = mat_strains(i, :);
-                f_force = @(e) obj.force_funcs{i}(e, pressures(i));
-                mat_forces(i, :) = arrayfun(f_force, strains_i);
-            end
         end
     end
 
