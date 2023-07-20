@@ -1,3 +1,6 @@
 [submodule "continuum-solver"]
 	path = include/continuum-solver
 	url = git@github.com:wfan19/continuum-solver.git
+[submodule "include/Adjoint"]
+	path = include/Adjoint
+	url = git@github.com:wfan19/Adjoint.git
