@@ -116,12 +116,6 @@ classdef variable_strain_segment < matlab.mixin.Copyable
             for i = 1 : N_segments
                 arm_i = obj.arms{i};
                 for j = 1 : N_muscles
-                    % Solve for the muscle's free-contraction length
-                    forcefunc_j = obj.force_funcs{j};
-                    options = optimset("Display", "off");
-                    neutral_strain = fsolve(@(strain) forcefunc_j(strain, pressures(j)), 0, options);
-                    free_contraction_length = obj.l_0 * (1 + neutral_strain);
-
                     % I think strain should be calculated from
                     % free-contraction length, not neutral length?
                     mat_strains(j, i) = (arm_i.muscles(j).l - obj.l_0) / obj.l_0;
