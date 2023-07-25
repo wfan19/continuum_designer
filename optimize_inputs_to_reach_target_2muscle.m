@@ -27,7 +27,7 @@ for i = 1 : N_segments
 end
 arm_series= ArmSeries(arm_segments);
 
-%% Define an optimization problem to solve:
+%% Manually scope out the optimization landscape
 disp("Preforming naive sweep of pressure space")
 Q = [0; 0; 0];
 g_tip_goal = Pose2.hat([0.5; -0.5; 0]);
@@ -41,6 +41,7 @@ p2 = linspace(0, 70, resolution);
 
 E = zeros(resolution, resolution);
 f = waitbar(0, "Performing naive sweep of pressure space");
+tic
 for i = 1 : resolution
     for j = 1 : resolution
         pressures_ij = [P1(i, j); P2(i, j)];
@@ -48,9 +49,25 @@ for i = 1 : resolution
     end
     waitbar((resolution * (i-1) + j) / resolution^2, f, "Preforming naive sweep of pressure space");
 end
+toc
 close(f)
 
 mesh(P1, P2, E);
+
+%% Now perform optimization over the input pressure space
+tic
+options = optimoptions("fmincon", "DiffMinChange", 0.1);
+f_tip_error = @(pressures) tip_error(pressures, arm_series, Q, g_tip_goal);
+pressures_optim = fmincon(f_tip_error, [30; 0], [], [], [], [], [0; 0], [100; 100]);
+toc
+
+%% Verify the optimization solution
+g_circ_optim = arm_series.solve_equilibrium_gina(pressures_optim, Q);
+g_tip_optim = arm_series.get_tip_pose(g_circ_optim);
+
+delta_g = inv(g_tip_optim) * g_tip_goal;
+disp("Final tip pose error:")
+disp(Pose2.vee(delta_g))
 
 %%
 function error = tip_error(pressures, arm, Q, g_tip_goal)
