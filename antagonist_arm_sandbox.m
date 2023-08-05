@@ -65,7 +65,7 @@ function antagonist_arm_sandbox
         % Update the arm
         pressures_temp = cellfun(@(slider)slider.Value, actuator_sliders);
         pressures = pressures_temp(:); % Make sure it's a column vector
-        arm_series.solve_equilibrium_gina(pressures, Q);
+        g_circ_right_eq = arm_series.solve_equilibrium_gina(pressures, Q);
         cla(ax);
         Plotter2D.plot_arm_series(arm_series, ax);
 

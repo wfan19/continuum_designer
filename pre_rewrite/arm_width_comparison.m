@@ -76,3 +76,43 @@ linkaxes(fig.Children, "z");
 
 
 fprintf("\n\n")
+
+%% Plot just the bellow force curves:
+
+bellow_forces = reshape(muscle_forces(1, :, :), N_segments, length(radii))';
+bellow_forces_s0 = reshape(muscle_forces(1, 1, :), 1, length(radii));
+
+% Create a smooth interpolation of the bellow force curve
+
+
+ax = axes(figure());
+mesh(ax, S, R, bellow_forces)
+view(-35, 20)
+grid on
+xlabel("Position along arm (%)")
+ylabel("Radius (m)")
+zlabel("Bellow Force Needed(N)")
+
+%% Plot just the bellow force curves (with contour)
+ax = axes(figure());
+hold on
+mesh(ax, S, R, bellow_forces)
+contour3(ax, S, R, bellow_forces, bellow_forces_s0([2:2:end - 1, end]), 'k', "linewidth", 2)
+view(-35, 20)
+grid on
+xlabel("Position along arm (%)")
+ylabel("Radius (m)")
+zlabel("Bellow Force Needed(N)")
+
+%% Plot bellow force curve and where constant taper would end up
+r_base = 0.06;
+r_tip_1 = 0.02;
+r_tip_2 = 0.04;
+r_tip_3 = 0.06;
+
+n_points = N_segments;
+rs_1 = linspace(r_tip_1, r_base, n_points);
+rs_2 = linspace(r_tip_2, r_base, n_points);
+rs_3 = linspace(r_tip_3, r_base, n_points);
+
+fs_1 = 0;
