@@ -6,31 +6,14 @@
 l_0 = 0.5;
 rho = 0.0254;
 
-g_o_A = Pose2.hat([0, rho, 0]);
-g_o_B = Pose2.hat([0, -rho, 0]);
-g_o_rods = {g_o_A; g_o_B};
+arm_series = ArmSeriesFactory.constant_2d_muscle_arm(N_segments, rho, l_0);
+arm_series.set_mechanics(GinaMuscleMechanics(l_0));
 
-g_0_o = Pose2.hat([0, 0, -pi/2]);
-
-arm_segment = ArmSegment(Pose2, g_0_o, g_o_rods, l_0);
-
-arm_segment.rod_o.mechanics.l_0 = l_0; % Default length of the whole segment
-
-arm_segment.rods(1).mechanics = GinaMuscleMechanics(l_0);
-arm_segment.rods(2).mechanics = GinaMuscleMechanics(l_0);
-
-% TODO: Better way to create a series of segments.
-N_segments = 3;
-arm_segments = ArmSegment.empty(0, N_segments);
-for i = 1 : N_segments
-    arm_segments(i) = copy(arm_segment);
-end
-arm_series= ArmSeries(arm_segments);
+Q = [0; -1; 0];
+g_tip_goal = Pose2.hat([0.5; -0.5; 0]);
 
 %% Manually scope out the optimization landscape
 disp("Preforming naive sweep of pressure space")
-Q = [0; 0; 0];
-g_tip_goal = Pose2.hat([0.5; -0.5; 0]);
 
 % Naive sweep over the pressure input space
 resolution = 20;
@@ -52,28 +35,30 @@ end
 toc
 close(f)
 
-mesh(P1, P2, E);
-
 %% Now perform optimization over the input pressure space
-tic
-options = optimoptions("fmincon", "DiffMinChange", 0.1);
-f_tip_error = @(pressures) tip_error(pressures, arm_series, Q, g_tip_goal);
-pressures_optim = fmincon(f_tip_error, [30; 0], [], [], [], [], [0; 0], [100; 100]);
-toc
+[pressures_optim, g_tip_optim, residual] = f_optimize_inputs_to_reach_target_2muscle(arm_series, Q, g_tip_goal);
+disp(pressures_optim)
+%% 
+figure()
+hold on
+mesh(P1, P2, E);
+scatter3(pressures_optim(1), pressures_optim(2), residual, 'ro')
+view(30, 30)
+grid on
+%% 
+ax = axes(figure());
+arm_series.solve_equilibrium_gina(pressures_optim, Q);
+Plotter2D.plot_arm_series(arm_series, ax);
+scatter(0.5, -0.5, 'ro')
 
-%% Verify the optimization solution
-g_circ_optim = arm_series.solve_equilibrium_gina(pressures_optim, Q);
-g_tip_optim = arm_series.get_tip_pose(g_circ_optim);
-
-delta_g = inv(g_tip_optim) * g_tip_goal;
-disp("Final tip pose error:")
-disp(Pose2.vee(delta_g))
-
-%%
+%% Error function for the naive sweep
 function error = tip_error(pressures, arm, Q, g_tip_goal)
-    g_circ_right_eq = arm.solve_equilibrium_gina(pressures, Q);
+    g_circ_right_eq = arm.solve_equilibrium_gina(pressures, Q, "print", false);
     tip_pose = arm.get_tip_pose(g_circ_right_eq);
+    
+    % Question: Should this be in SE2 or se2?
     v_error = Twist2.vee(logm(inv(tip_pose) * g_tip_goal));
-    K = diag([1, 1, 1]);
+
+    K = diag([1, 1, 0]);
     error = v_error' * K * v_error;
 end
