@@ -19,11 +19,11 @@ function antagonist_arm_sandbox
     arm_series.solve_equilibrium_gina([0; 0; 0; 0;], Q);
 
     %% Initialize the interactive UI
-    fig = uifigure;
-    fig.Name = "2D Antagonistic Arm Sandbox";
-    fig.Position = [500, 500, 1200, 800];
+    fig_main_panel = uifigure;
+    fig_main_panel.Name = "2D Antagonistic Arm Sandbox";
+    fig_main_panel.Position = [500, 500, 1200, 800];
 
-    top_gl = uigridlayout(fig);
+    top_gl = uigridlayout(fig_main_panel);
     top_gl.ColumnWidth = {'3x', '2x'};
     top_gl.RowHeight = {'3x', '2x'};
 
@@ -63,8 +63,8 @@ function antagonist_arm_sandbox
     % Callback function for when an actuator control slider is changed
     function on_pressure_change(src, event)
         % Show loading animation on mouse pointer
-        fig = ancestor(src, "figure");
-        set(fig, "Pointer", "watch");
+        fig_main_panel = ancestor(src, "figure");
+        set(fig_main_panel, "Pointer", "watch");
         drawnow;
 
         % Fetch each slider's pressure value and store in a list
@@ -75,9 +75,10 @@ function antagonist_arm_sandbox
         cla(ax);
         g_circ_right_eq = arm_series.solve_equilibrium_gina(pressures, Q);
         Plotter2D.plot_arm_series(arm_series, ax);
+        Plotter2D.plot_g_circ_right(arm_series, g_circ_panel)
 
         % Revert mouse pointer back to normal state
-        set(fig, "Pointer", "arrow");
+        set(fig_main_panel, "Pointer", "arrow");
     end
 
     %% Create sliders for tweaking arm design parameters
@@ -111,8 +112,8 @@ function antagonist_arm_sandbox
     % Callback function that is called whenever the slider is dragged
     function on_width_change(src, event)
         % Set loading animation for mouse pointer
-        fig = ancestor(src, "figure");
-        set(fig, "Pointer", "watch");
+        fig_main_panel = ancestor(src, "figure");
+        set(fig_main_panel, "Pointer", "watch");
         drawnow
 
         % Fetch the values of all the design sliders as a list
@@ -135,12 +136,13 @@ function antagonist_arm_sandbox
         cla(ax);
         arm_series_new.solve_equilibrium_gina(pressures, Q);
         Plotter2D.plot_arm_series(arm_series_new, ax);
+        Plotter2D.plot_g_circ_right(arm_series, g_circ_panel)
         
         % Save the new arm as the current arm
         arm_series = arm_series_new;
 
         % Set the mouse pointer back to normal
-        set(fig, "Pointer", "arrow");
+        set(fig_main_panel, "Pointer", "arrow");
         drawnow;
     end
 
@@ -161,8 +163,8 @@ function antagonist_arm_sandbox
     vertical_load_slider.Layout.Column = 2;
 
     function on_load_change(src, event)
-        fig = ancestor(src, "figure");
-        set(fig, "Pointer", "watch")
+        fig_main_panel = ancestor(src, "figure");
+        set(fig_main_panel, "Pointer", "watch")
         drawnow
 
         vertical_load = event.Value;
@@ -171,8 +173,20 @@ function antagonist_arm_sandbox
         cla(ax);
         arm_series.solve_equilibrium_gina(pressures, Q);
         Plotter2D.plot_arm_series(arm_series, ax);
+        Plotter2D.plot_g_circ_right(arm_series, g_circ_panel)
         
-        set(fig, "Pointer", "arrow");
+        set(fig_main_panel, "Pointer", "arrow");
         drawnow;
     end
+
+    %% Create panel that houses the detailed g_circ and strain force surface plots
+    fig_plots = uifigure;
+    fig_gl = uigridlayout(fig_plots, [1,1]);
+    fig_gl.ColumnWidth = {'fit'};
+    fig_gl.RowHeight = {'fit'};
+    
+    %g_circ_panel = uipanel(fig_gl);
+    %g_circ_panel.AutoResizeChildren = "off";
+    g_circ_panel = fig_gl;
+    Plotter2D.plot_g_circ_right(arm_series, g_circ_panel)
 end
