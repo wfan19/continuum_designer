@@ -9,16 +9,16 @@ rho = 0.0254;
 arm_series = ArmSeriesFactory.constant_2d_muscle_arm(N_segments, rho, l_0);
 arm_series.set_mechanics(GinaMuscleMechanics(l_0));
 
-Q = [0; -1; 0];
-g_tip_goal = Pose2.hat([0.5; -0.5; 0]);
+Q = [0; -0.25; 0];
+g_tip_goal = Pose2.hat([0.3; -0.2; 0]);
 
 %% Manually scope out the optimization landscape
 disp("Preforming naive sweep of pressure space")
 
 % Naive sweep over the pressure input space
 resolution = 20;
-p1 = linspace(0, 70, resolution);
-p2 = linspace(0, 70, resolution);
+p1 = linspace(0, 100, resolution);
+p2 = linspace(0, 100, resolution);
 
 [P1, P2] = meshgrid(p1, p2);
 
@@ -49,7 +49,8 @@ grid on
 ax = axes(figure());
 arm_series.solve_equilibrium_gina(pressures_optim, Q);
 Plotter2D.plot_arm_series(arm_series, ax);
-scatter(0.5, -0.5, 'ro')
+goal_coords = Pose2.vee(g_tip_goal);
+scatter(goal_coords(1), goal_coords(2), 'ro')
 
 %% Error function for the naive sweep
 function error = tip_error(pressures, arm, Q, g_tip_goal)
