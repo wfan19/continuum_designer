@@ -39,7 +39,7 @@ function two_muscle_arm_sandbox
 
         % Solve the equilibrium with the new pressure values
         cla(ax);
-        g_circ_right_eq = arm_series.solve_equilibrium_gina(pressures, Q);
+        g_circ_right_eq = arm_series.solve_equilibrium_gina(pressures, Q, "frame", frame);
         Plotter2D.plot_arm_series(arm_series, ax);
         Plotter2D.plot_g_circ_right(arm_series, g_circ_panel)
 
@@ -127,21 +127,20 @@ function two_muscle_arm_sandbox
             arm_series_new.set_mechanics(arm_series.segments(1).rods(j).mechanics, j);
         end
         arm_series = arm_series_new;
-        
         reload_sim();
     end
     % TODO: Sliders for changing the inner radius as well
 
     %% Create sliders for changing the load scenario
-    loading_layout = uigridlayout(top_gl, [3, 2]);
+    loading_layout = uigridlayout(top_gl, [4, 2]);
     loading_layout.ColumnWidth = {'1x', '3x'};
     loading_layout.Layout.Row = 2;
     loading_layout.Layout.Column = 2;
     
     load_labels = ["X load (N)", "Y load (N)", "Moment (Nm)"];
     load_lims = [
-        -20, 20;
-        -20, 20;
+        -10, 10;
+        -10, 10;
         -5, 5;
     ];
 
@@ -159,15 +158,29 @@ function two_muscle_arm_sandbox
         cell_load_sliders{i}.Layout.Column = 2;
     end
 
+    load_type_label = uilabel(loading_layout);
+    load_type_label.Text = "Frame of load";
+    load_type_label.Layout.Column = 1;
+    load_type_label.Layout.Row = 4;
+
+    frame = "World";
+    load_type_switch = uiswitch(loading_layout);
+    load_type_switch.Items = {'World', 'Tip'};
+    load_type_switch.Layout.Column = 2;
+    load_type_switch.Layout.Row = 4;
+    load_type_switch.ValueChangedFcn = {@on_load_change};
+
     function on_load_change(src, event)
         loads = cellfun(@(slider)slider.Value, cell_load_sliders);
         Q = loads(:); % Make sure it's a column vector
 
+        frame = load_type_switch.Value;
         reload_sim()
     end
 
     %% Create panel that houses the detailed g_circ and strain force surface plots
     fig_plots = uifigure;
+    fig_plots.Position = [300, 300, 1500, 500];
     fig_gl = uigridlayout(fig_plots, [1,1]);
     fig_gl.ColumnWidth = {'fit'};
     fig_gl.RowHeight = {'fit'};
