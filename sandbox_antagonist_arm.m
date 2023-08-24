@@ -90,13 +90,15 @@ function antagonist_arm_sandbox
     % TODO: Sliders for changing the inner radius as well
 
     % Create the sliders one by one from a list of names and ranges
-    arm_designer_sliders = cell(1, 2);
-    arm_designer_slider_labels = cell(1, 2);
+    arm_designer_sliders = cell(1, 4);
+    arm_designer_slider_labels = cell(1, 4);
     slider_limits = [
         0.02, 0.12;
-        0.01, 0.12,
+        0.01, 0.12;
+        0.01, 0.12;
+        0.005, 0.12;
     ];
-    names = ["R outer base", "R outer tip"];
+    names = ["R outer base", "R outer tip", "R inner base", "R inner tip"];
     for i = 1 : length(arm_designer_sliders)
         arm_designer_slider_labels{i} = uilabel(arm_designer_layout);
         arm_designer_slider_labels{i}.Text = names(i);
@@ -124,8 +126,8 @@ function antagonist_arm_sandbox
         rho_outer_tip = design_params(2);
 
         % Create a new arm with the design params
-        rho_inner_base = 1/3 * rho_outer_base;
-        rho_inner_tip = 1/3 * rho_outer_tip;
+        rho_inner_base = design_params(3);
+        rho_inner_tip = design_params(4);
         arm_series_new = ArmSeriesFactory.tapered_2d_antagonist_arm( ...
             N_segments, rho_inner_base, rho_outer_base, rho_inner_tip, rho_outer_tip, l_0 ...
         );
