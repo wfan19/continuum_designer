@@ -1,10 +1,14 @@
-function cell_g_circ_out = find_base_curve_use_heuristics(pose_base, tip_poses, tip_loads, N_segs, f_cost)
+function cell_g_circ_out = find_base_curve_use_heuristics(pose_base, tip_poses, tip_load, N_segs, f_cost)
     % Given a set of target tip poses and loads, find the base curves that
     % optimize a given cost function
     
     % Note: here we employ a specific data structure for efficiently
     % encoding shear-free base curve geometries for arms with multiple
-    % segments reaching multiple target poses.
+    % segments reaching multiple target poses. We are forced to do this
+    % to input the data into Matlab's optimization functions. Normally, I
+    % would prefer to work with a cell-array with each element being each
+    % arm-series' matrix of twist vectors (mat_g_circ_right). Hence the
+    % conversion function.
 
     % For a base-curve planning problem for an m-segment arm reaching
     % n-targets, the geometry matrix G is defined as 
@@ -24,29 +28,48 @@ function cell_g_circ_out = find_base_curve_use_heuristics(pose_base, tip_poses, 
     % Additionally, each column in a geometry matrix (the lengths and
     % curvatures describing the segments of a single arm) is a "geometry
     % vector". 
+    %
 
-    N_segs = 3;
-    v_geo_0 = repmat([1; 0], N_segs, 1);
-    
-    cell_g_circ = cell(1, size(tip_poses, 2));
-    mat_geom_out = zeros(N_segs*2, length(tip_poses));
-
-
-    for i_pose = 1 : size(tip_poses, 2)
-        opts = optimoptions("fmincon", "algorithm", "interior-point", "display", "notify-detailed");
-        f_constraint = @(v_in) base_curve_tip_constraint_v(v_in, Pose2.hat(pose_base), Pose2.hat(tip_poses(:, i_pose)));
-
-        [soln, res] = fmincon(@base_curve_cost_v, v_geo_0, [], [], [], [], [], [], f_constraint, opts);
-        cell_g_circ{i_pose} = v_geom_to_g_circ(soln);
-        mat_geom_out(:, i_pose) = soln;
-    end
+    % ========== Old version =========
+    % cell_g_circ = cell(1, size(tip_poses, 2));
+    % mat_geom_out = zeros(N_segs*2, length(tip_poses));
+    % 
+    % for i_pose = 1 : size(tip_poses, 2)
+    %     opts = optimoptions("fmincon", "algorithm", "interior-point", "display", "notify-detailed");
+    %     f_constraint = @(v_in) base_curve_tip_constraint_v(v_in, Pose2.hat(pose_base), Pose2.hat(tip_poses(:, i_pose)));
+    % 
+    %     [soln, res] = fmincon(@base_curve_cost_v, v_geo_0, [], [], [], [], [], [], f_constraint, opts);
+    %     cell_g_circ{i_pose} = v_geom_to_g_circ(soln);
+    %     mat_geom_out(:, i_pose) = soln;
+    % end
 
 
     %============ New ===========
+    N_segs = 3;
     N_poses = size(tip_poses, 2);
+    v_geo_0 = repmat([1; 0], N_segs, 1);
     mat_geo_0 = repmat(v_geo_0, 1, N_poses);
 
-    [soln, res] = fmincon(@base_curve_cost_sum_of_var_from_each_segment, mat_geo_0, [], [], [], [], [], [], @base_curve_tip_constraint);
+    % Create a simple arm (we don't care about its neutral length or width)
+    % We only care about its base curve - using the arm object lets us
+    % access the functions for computing reaction forces along the arm
+    simple_arm = ArmSeriesFactory.constant_2d_muscle_arm(N_segs, 0.01, 1);
+
+    % TODO: Create this with a script
+    A_select_ls = -[
+        1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+        0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+        0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+        0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+        0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0;
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0;
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0;
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0;
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0;
+    ];
+    b_zero = zeros(9, 1);
+
+    [soln, res] = fmincon(@base_curve_cost_min_bending_moment, mat_geo_0, A_select_ls, b_zero, [], [], [], [], @base_curve_tip_constraint);
     %[soln, res] = fmincon(@base_curve_cost_dist_of_all_ls, mat_geo_0, [], [], [], [], [], [], @base_curve_tip_constraint);
     cell_g_circ_out = mat_geom_to_g_circ(soln);
 
@@ -60,6 +83,7 @@ function cell_g_circ_out = find_base_curve_use_heuristics(pose_base, tip_poses, 
         v_cost = std(lengths);
     end
 
+    % Kinematic base curve costs
     function cost = base_curve_cost_sum_of_var_from_each_arm(mat_geom)
         % Note: This seems to reproduce the results of individually
         % minimizing each arm
@@ -73,7 +97,7 @@ function cell_g_circ_out = find_base_curve_use_heuristics(pose_base, tip_poses, 
         cost = sum(v_stds);
     end
 
-    function cost = base_curve_cost_sum_of_var_from_each_segment(mat_geom)
+    function cost = base_curve_cost_sum_of_std_from_each_segment(mat_geom)
         % Note: This seems to reproduce the results of individually
         % minimizing each arm
         cell_g_circ_right = mat_geom_to_g_circ(mat_geom);
@@ -87,7 +111,7 @@ function cell_g_circ_out = find_base_curve_use_heuristics(pose_base, tip_poses, 
         cost = sum(v_stds);
     end
 
-    function cost = base_curve_cost_norm_of_variances(mat_geom)
+    function cost = base_curve_cost_norm_of_stds(mat_geom)
         cell_g_circ_right = mat_geom_to_g_circ(mat_geom);
         v_cost = zeros(length(cell_g_circ_right), 1);
         
@@ -99,7 +123,7 @@ function cell_g_circ_out = find_base_curve_use_heuristics(pose_base, tip_poses, 
         cost = norm(v_cost);
     end
 
-    function cost = base_curve_cost_dist_of_all_ls(mat_geom)
+    function cost = base_curve_cost_std_of_all_ls(mat_geom)
         cell_g_circ_right = mat_geom_to_g_circ(mat_geom);
         all_twists = [cell_g_circ_right{:}];
         all_ls = all_twists(1, :);
@@ -107,7 +131,7 @@ function cell_g_circ_out = find_base_curve_use_heuristics(pose_base, tip_poses, 
         cost = std(all_ls);
     end
 
-    function cost = base_curve_cost_variance_from_target(mat_geom)
+    function cost = base_curve_cost_std_dist_from_target_l(mat_geom)
         cell_g_circ_right = mat_geom_to_g_circ(mat_geom);
         all_twists = [cell_g_circ_right{:}];
         all_ls = all_twists(1, :);
@@ -116,7 +140,34 @@ function cell_g_circ_out = find_base_curve_use_heuristics(pose_base, tip_poses, 
         dist_from_target_l = abs(all_ls - 0.17);
         cost = norm(dist_from_target_l);
     end
-    
+
+    % Mechanics-based base-curve costs
+    function cost = base_curve_cost_min_shear_force(mat_geom)
+        cell_g_circ_right = mat_geom_to_g_circ(mat_geom);
+        
+        cell_g_ucirc_left = cell(size(cell_g_circ_right));
+        for i = 1 : length(cell_g_circ_right)
+            simple_arm.g_circ_right = cell_g_circ_right{i};
+            cell_g_ucirc_left{i} = simple_arm.calc_external_reaction(tip_load);
+        end
+        all_g_ucircs = [cell_g_ucirc_left{:}];
+        all_shears = all_g_ucircs(2, :);
+        cost = norm(all_shears);
+    end
+
+    function cost = base_curve_cost_min_bending_moment(mat_geom)
+        cell_g_circ_right = mat_geom_to_g_circ(mat_geom);
+        
+        cell_g_ucirc_left = cell(size(cell_g_circ_right));
+        for i = 1 : length(cell_g_circ_right)
+            simple_arm.g_circ_right = cell_g_circ_right{i};
+            cell_g_ucirc_left{i} = simple_arm.calc_external_reaction(tip_load);
+        end
+        all_g_ucircs = [cell_g_ucirc_left{:}];
+        all_moments = all_g_ucircs(3, :);
+        cost = norm(all_moments);
+    end
+
     function [ineq_residual, eq_residual] = base_curve_tip_constraint_v(v_in, base_pose, goal_pose)
         % Constraint function for determining whether a set of shearless twist
         % vectors actually reach a given goal pose. 
