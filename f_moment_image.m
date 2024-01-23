@@ -24,7 +24,6 @@ function [mat_rxns, mat_rl, mat_rgb] = f_moment_image(f_reaction, rhos, l_0s, ax
     end
 
     cell_wl = cell(N_w, N_l_0);
-    cell_arm_segments = cell(N_w, N_l_0);
     cell_rxns = cell(N_w, N_l_0);
     cell_colors = cell(N_w, N_l_0);
     for i = 1 : N_w
@@ -33,9 +32,8 @@ function [mat_rxns, mat_rl, mat_rgb] = f_moment_image(f_reaction, rhos, l_0s, ax
             l_0_j = l_0s(j);
             % Calculate the internal reaction moment that the muscles would create
             % at that curvature.
-            [segment_ij, rxn] = f_reaction(rho_i, l_0_j);
+            rxn = f_reaction(rho_i, l_0_j);
         
-            cell_arm_segments{i, j} = segment_ij;
             cell_wl{i, j} = [rho_i; l_0_j];
             cell_rxns{i, j} = rxn;
             cell_colors{i, j} = [i/N_w * 0.8; j/N_l_0 * 0.75 + 0.25; 1];
