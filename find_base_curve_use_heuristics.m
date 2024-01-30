@@ -45,7 +45,6 @@ function cell_g_circ_out = find_base_curve_use_heuristics(pose_base, tip_poses, 
 
 
     %============ New ===========
-    N_segs = 3;
     N_poses = size(tip_poses, 2);
     v_geo_0 = repmat([1; 0], N_segs, 1);
     mat_geo_0 = repmat(v_geo_0, 1, N_poses);
@@ -55,19 +54,19 @@ function cell_g_circ_out = find_base_curve_use_heuristics(pose_base, tip_poses, 
     % access the functions for computing reaction forces along the arm
     simple_arm = ArmSeriesFactory.constant_2d_muscle_arm(N_segs, 0.01, 1);
 
-    % TODO: Create this with a script
-    A_select_ls = -[
-        1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
-        0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
-        0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
-        0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0;
-        0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0;
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0;
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0;
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0;
-        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0;
-    ];
-    b_zero = zeros(9, 1);
+
+    % Create the A and b matrix for applying a non-negative constraint on
+    % the lengths
+    % The A matrix just pulls out all the lengths from the vectorized
+    % geometry matrix, such that
+    % A * mat_geo(:) = [l_1, l_2, ..., l_n];
+    N_states = N_segs * N_poses * 2;
+    A_select_ls = zeros(N_states / 2, N_states);
+    for i_row = 1 : size(A_select_ls, 1)
+        A_select_ls(i_row, 2*i_row - 1) = -1;
+    end
+
+    b_zero = zeros(N_states / 2, 1);
 
     [soln, res] = fmincon(f_cost, mat_geo_0, A_select_ls, b_zero, [], [], [], [], @base_curve_tip_constraint);
     cell_g_circ_out = mat_geom_to_g_circ(soln);
@@ -99,7 +98,8 @@ function cell_g_circ_out = find_base_curve_use_heuristics(pose_base, tip_poses, 
             tip_pose = pose;
             g_target_i = Pose2.hat(tip_poses(:, i_arm));
             rdelta_pose = inv(tip_pose) * g_target_i;
-            eq_residual(:, i_arm) = Twist2.vee(logm(rdelta_pose));
+            K_weights = diag([1, 1, 0]);
+            eq_residual(:, i_arm) = K_weights * Twist2.vee(logm(rdelta_pose));
         end
     end
     
