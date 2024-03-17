@@ -3,7 +3,7 @@ function poses = calc_poses(g_0, mat_segment_twists)
     ds = 1/N_twists;
     N_poses = N_twists + 1;
 
-    poses = zeros(3, 3, N_poses);
+    poses = zeros(3, 3, N_poses, class(mat_segment_twists));
     poses(:, :, 1) = g_0;
     for i = 1 : N_twists
 

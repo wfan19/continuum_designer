@@ -1,6 +1,6 @@
 function residual = check_equilibrium(mat_segment_twists, Q_tip, p, struct_design)
     % Compute the externally applied wrenches
-    external_wrenches = calc_external_wrench(mat_segment_twists, Q_tip, struct_design);
+    external_wrenches = calc_external_wrench(mat_segment_twists, Q_tip, struct_design.g_0);
 
     % Compute the internal reaction wrenches
     reaction_wrenches = calc_reaction_wrench(mat_segment_twists, p, struct_design);

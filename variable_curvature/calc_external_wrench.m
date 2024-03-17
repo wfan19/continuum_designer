@@ -1,9 +1,9 @@
-function external_wrenches = calc_external_wrench(mat_segment_twists, Q_tip, struct_design)
+function external_wrenches = calc_external_wrench(mat_segment_twists, Q_tip, g_0)
     N_twists = size(mat_segment_twists, 2);
-    poses = calc_poses(struct_design.g_0, mat_segment_twists);
+    poses = calc_poses(g_0, mat_segment_twists);
     g_tip = poses(:, :, end);
     
-    external_wrenches = zeros(3, N_twists);
+    external_wrenches = zeros(3, N_twists, class(mat_segment_twists));
     for i = 1 : N_twists
         g_i = poses(:, :, i);
         g_i_tip = inv(g_i) * g_tip;
