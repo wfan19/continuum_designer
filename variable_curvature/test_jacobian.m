@@ -34,8 +34,8 @@ function test_reaction_jacobian(testCase)
     struct_design.rhos = [-0.05, 0.05];
     struct_design.l_0 = 0.5;
     struct_design.fs = {
-        @GinaMuscleMechanics.actuatorForce_key,
-        @GinaMuscleMechanics.actuatorForce_key,
+        @JacobBellowMechanics.actuator_force,
+        @JacobBellowMechanics.actuator_force,
     };
 
     struct_design.mat_A = [
@@ -49,11 +49,11 @@ function test_reaction_jacobian(testCase)
         % how that changes the output
         test_twists_i = test_segment_twists(:, :, i);
         
-        rxn_wrench_g_circ = calc_reaction_wrench(test_twists_i, p, struct_design);
+        [rxn_wrench_g_circ, J] = calc_reaction_wrench(test_twists_i, p, struct_design);
        
         % Generate a random small change in base curve shape
-        d_g_circ_max = 1e-2;
-        d_g_circ_min = -1e-2;
+        d_g_circ_max = 1e-3;
+        d_g_circ_min = -1e-3;
         range = d_g_circ_max - d_g_circ_min;
         d_g_circ = range*rand([3, N_segs]) + d_g_circ_min;
         test_twists_i_perturbed = test_twists_i + d_g_circ; % Slightly modified base-curve
@@ -61,13 +61,13 @@ function test_reaction_jacobian(testCase)
         % Compute the reaction at the slightly different base-curve
         rxn_wrench_perturbed = calc_reaction_wrench(test_twists_i_perturbed, p, struct_design);
         
-        d_a = rxn_wrench_perturbed - rxn_wrench_g_circ;
+        d_a_numeric = rxn_wrench_perturbed - rxn_wrench_g_circ;
         fprintf("Test %d", i);
-        disp(d_g_circ(:));
-        disp(d_a(:));
 
         %%% Compare to the output from J*dx using the analytic implementation
         % First we need to construct the analytic Jacobian
+        d_a_analytic = J * d_g_circ(:);
+        disp([d_a_numeric(:), d_a_analytic]);
     end
 end
 
