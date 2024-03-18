@@ -1,4 +1,4 @@
-function external_wrenches = calc_external_wrench(mat_segment_twists, Q_tip, g_0)
+function [external_wrenches, J] = calc_external_wrench(mat_segment_twists, Q_tip, g_0)
     N_twists = size(mat_segment_twists, 2);
     poses = calc_poses(g_0, mat_segment_twists);
     g_tip = poses(:, :, end);
@@ -17,5 +17,11 @@ function external_wrenches = calc_external_wrench(mat_segment_twists, Q_tip, g_0
         g_ucirc_right_s = inv(Pose2.adjoint(g_i_tip))' * g_ucirc_right_tip;
     
         external_wrenches(:, i) = g_ucirc_right_s;
+    end
+
+    if (nargout == 2) && (N_twists == 5)
+        v_g_0= Pose2.vee(g_0);
+        theta_0 = v_g_0(3);
+        J = J_external_5seg(theta_0, Q_tip, mat_segment_twists);
     end
 end
