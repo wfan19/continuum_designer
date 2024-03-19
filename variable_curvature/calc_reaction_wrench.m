@@ -14,6 +14,7 @@ function [reaction_wrenches, J] = calc_reaction_wrench(mat_segment_twists, p, st
         end
     end
     reaction_wrenches = struct_design.mat_A * forces;
+    reaction_wrenches(3, :) = reaction_wrenches(3, :) + mat_segment_twists(3, :) * -1;
 
     if nargout == 2
         da_dtwists = cell(1, N_twists);

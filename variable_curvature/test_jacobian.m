@@ -23,17 +23,6 @@ function test_segment_twists = create_test_twists(N_segs, N_test_pts)
     end
 end
 
-function [df, dx, J_x] = compute_numeric_jacobian(func, test_x, dx_min, dx_max)
-    dx_range = dx_max - dx_min;
-    dx = dx_range * rand(size(test_x)) + dx_min;
-    test_x_perturbed = test_x + dx;
-
-    [f_x, J_x] = func(test_x);
-    [f_x_perturbed, ~] = func(test_x_perturbed);
-
-    df = f_x_perturbed - f_x;
-end
-
 function test_reaction_jacobian(testCase)   
     %%% Declare baseline test arm design and muscle pressures
     % TODO: test for different pressures?
@@ -65,15 +54,12 @@ function test_reaction_jacobian(testCase)
         %%% For each linearization point, take a random small step in x, and track
         % how that changes the output
         test_twists_i = test_segment_twists(:, :, i);
-        [d_a_numeric, d_g_circ, J_x] = compute_numeric_jacobian(f_reaction, test_twists_i, -1e-5, 1e-5);
+        [e, d_a_numeric, d_g_circ, J_x] = test_numeric_jacobian(f_reaction, test_twists_i, -1e-5, 1e-5);
         
         %%% Compare to the output from J*dx using the analytic implementation
         % First we need to construct the analytic Jacobian
-        d_a_analytic = J_x * d_g_circ(:);
         fprintf("Test %d", i);
-        disp([d_a_numeric(:), d_a_analytic]);
-        
-        e = norm(d_a_numeric(:) - d_a_analytic(:));
+        disp([d_a_numeric(:), J_x*d_g_circ(:)]);
         verifyLessThan(testCase, e, 1e-3);
     end
 end
@@ -100,15 +86,12 @@ function test_external_jacobian(testCase)
         %%% For each linearization point, take a random small step in x, and track
         % how that changes the output
         test_twists_i = test_segment_twists(:, :, i);
-        [d_a_numeric, d_g_circ, J_x] = compute_numeric_jacobian(f_reaction, test_twists_i, -1e-5, 1e-5);
+        [e, d_a_numeric, d_g_circ, J_x] = test_numeric_jacobian(f_reaction, test_twists_i, -1e-5, 1e-5);
         
         %%% Compare to the output from J*dx using the analytic implementation
         % First we need to construct the analytic Jacobian
-        d_a_analytic = J_x * d_g_circ(:);
         fprintf("Test %d", i);
-        disp([d_a_numeric(:), d_a_analytic]);
-
-        e = norm(d_a_numeric(:) - d_a_analytic(:));
+        disp([d_a_numeric(:), J_x * d_g_circ(:)]);
         verifyLessThan(testCase, e, 1e-3);
     end
 end
