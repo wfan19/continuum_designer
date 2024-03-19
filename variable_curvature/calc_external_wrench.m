@@ -18,10 +18,4 @@ function [external_wrenches, J] = calc_external_wrench(mat_segment_twists, Q_tip
     
         external_wrenches(:, i) = g_ucirc_right_s;
     end
-
-    if (nargout == 2) && (N_twists == 5)
-        v_g_0= Pose2.vee(g_0);
-        theta_0 = v_g_0(3);
-        J = J_external_5seg(theta_0, Q_tip, mat_segment_twists);
-    end
 end
