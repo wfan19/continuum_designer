@@ -18,7 +18,7 @@ function plot_poses(poses, ax, linestyle, plot_pose_markers, axis_length)
 
     % Plot
     hold(ax, "on")
-    plot(ax, p_x, p_y, linestyle, "linewidth", 3);
+    plot(ax, p_x, p_y, linestyle);
 
     if plot_pose_markers
         % Extract x unit vector components
