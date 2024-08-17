@@ -25,7 +25,7 @@ function [v_attainable, min_dists, p_solns] = check_reactions_attainable(q_tests
     for i = 1 : N_tests
         % Define the cost function: for each pressure, find how close it
         % gets the reactions to those required.
-        f_reaction_dist = @(pres) reaction_dists(pres, q_tests(:, :, i));
+        f_reaction_dist = @(pres) check_equilibrium_norm(pres, q_tests(:, :, i), segment_twists);
         opts = optimoptions('fmincon', 'display', 'off', 'StepTolerance', 1e-20, 'FunctionTolerance', 1e-10); 
 
         % Solve the optimization problem
@@ -42,17 +42,6 @@ function [v_attainable, min_dists, p_solns] = check_reactions_attainable(q_tests
         % If the minimum distance is below a threshold, then the reaction
         % is reachable and thus return true.
         v_attainable(i) = min_dists(i) < threshold;
-    end
-
-    function dist = reaction_dists(pressure, q_test)
-        reactions = calc_reaction_wrench(segment_twists, pressure, struct_design);
-        residuals = q_test + reactions;
-        
-        residuals(2, :) = 1e3 * segment_twists(2, :);
-
-        %dist = sum(vecnorm(residuals, 1));
-        dist = norm(residuals(:));
-    
     end
 end
 

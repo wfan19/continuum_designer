@@ -29,6 +29,10 @@ function attainable = check_reactions_attainable_fast(reaction_requirement, segm
     for i = 1 : N_nodes
         v_rxn_in_bndry(i) = inpolygon(f_required(i), m_required(i), traces_f_bndry(i, i_contour), traces_m_bndry(i, i_contour));
     end
+    attainable = all(v_rxn_in_bndry);
+    if ~attainable
+        return;
+    end
 
     % Test 2: are the changes in requierd reaction along the arm bounded by
     % the changes in of boundary reactions along the arm?
@@ -42,6 +46,10 @@ function attainable = check_reactions_attainable_fast(reaction_requirement, segm
     % pressures? If all no then return no. If yes, then proceed to the
     % check for each s
     i_contour_all = boundary(rltv_f_bndry(:), rltv_m_bndry(:), 0);
+    if numel(i_contour_all) == 0
+        return;
+    end
+
     contour_f_bndry = rltv_f_bndry(i_contour_all);
     contour_m_bndry = rltv_m_bndry(i_contour_all);
 
@@ -62,34 +70,6 @@ function attainable = check_reactions_attainable_fast(reaction_requirement, segm
     end
 
     %% Functions
-    % TODO: These should be general function files for code reuse.
-    function points = sample_edges_of_cuboid(N_points_on_edge, scales)
-        % Returns points on the edges and vertices of a N-dimensional cube
-        N_dims = length(scales);
-        N_edges = N_dims * 2^(N_dims - 1);
-        N_points = N_points_on_edge * N_edges;
-    
-        bitstrings = (dec2bin(1:2^(N_dims-1)) - '0')';
-        %points = rand([N_dims, N_points]);
-        points = [];
-        t = linspace(0, 1, N_points_on_edge+1);
-        t = t(2:end-1);
-        for i_dim = 1 : N_dims
-            % Create points for all vertices that has this dimension going 0-1
-            for i_edge = 1 : length(bitstrings)
-                bitstring_i = bitstrings(:, i_edge);
-                points_edge_i = repmat(bitstring_i, 1, length(t));
-                points_edge_i(i_dim, :) = t;
-                points = [points, points_edge_i];
-            end
-        end
-    
-        vertices = (dec2bin(0:(2^N_dims - 1)) - '0')';
-        points = [points, vertices];
-    
-        points = diag(scales) * points;
-    end
-
     function [traces_f, traces_m] = mat_wrenches_to_traces(mat_wrenches)
         N_ps = size(mat_wrenches, 3);
         N_nodes = size(mat_wrenches, 2);

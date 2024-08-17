@@ -1,4 +1,4 @@
-function reaction_wrenches = calc_reaction_wrench(mat_segment_twists, p, struct_design)
+function [reaction_wrenches, forces] = calc_reaction_wrench(mat_segment_twists, p, struct_design)
     N_actuators = length(struct_design.fs);
     N_twists = size(mat_segment_twists, 2);
     lengths_o = mat_segment_twists(1, :);
