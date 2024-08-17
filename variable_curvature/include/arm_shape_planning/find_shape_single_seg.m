@@ -1,7 +1,12 @@
-function cell_g_circ_out = find_base_curve_use_heuristics(pose_base, tip_poses, tip_load, N_segs, f_cost)
-    % NOTE: as of 8/17/2024 this function is DEPRECATED in favor of the
-    % more specific functions which draw distinctions between segments and
-    % nodes, which have different s-scalings
+function cell_g_circ_out = find_shape_single_seg(pose_base, tip_poses, tip_load, N_nodes, f_cost)
+    % NOTE: This function is heavily based on the
+    % "find_base_curve_use_heuristics.m" function. However, we draw the
+    % distinction between planning for a multi-segment VC arm versus a single 
+    % VC segment. This is because the s-scaling has to be handled
+    % differently - because we view each segment as an atomized unit, its s
+    % should range from 0-1, even if it is only one part of the overall
+    % arm. Thus, the length of the twist-vectors of any node should
+    % correspond to the instantaneous length of its parent segment.
 
     % Given a set of target tip poses and loads, find the base curves that
     % optimize a given cost function
@@ -37,7 +42,7 @@ function cell_g_circ_out = find_base_curve_use_heuristics(pose_base, tip_poses, 
 
     %% Function body
     N_poses = size(tip_poses, 2);
-    v_geo_0 = repmat([0.01; 0], N_segs, 1);
+    v_geo_0 = repmat([0.1; 0], N_nodes, 1);
     mat_geo_0 = repmat(v_geo_0, 1, N_poses);
 
     % Create the A and b matrix for applying a non-negative constraint on
@@ -45,7 +50,7 @@ function cell_g_circ_out = find_base_curve_use_heuristics(pose_base, tip_poses, 
     % The A matrix just pulls out all the lengths from the vectorized
     % geometry matrix, such that
     % A * mat_geo(:) = [l_1, l_2, ..., l_n];
-    N_states = N_segs * N_poses * 2;
+    N_states = N_nodes * N_poses * 2;
     A_select_ls = zeros(N_states / 2, N_states);
     for i_row = 1 : size(A_select_ls, 1)
         A_select_ls(i_row, 2*i_row - 1) = -1;
@@ -53,7 +58,7 @@ function cell_g_circ_out = find_base_curve_use_heuristics(pose_base, tip_poses, 
 
     b_zero = zeros(N_states / 2, 1);
 
-    opts = optimoptions("fmincon", "MaxFunctionEvaluations", 3e3);
+    opts = optimoptions("fmincon", "MaxFunctionEvaluations", 3e4);
     [soln, res] = fmincon(f_cost, mat_geo_0, A_select_ls, b_zero, [], [], [], [], @base_curve_tip_constraint, opts);
     cell_g_circ_out = mat_geom_to_g_circ(soln);
 
@@ -69,21 +74,17 @@ function cell_g_circ_out = find_base_curve_use_heuristics(pose_base, tip_poses, 
         ineq_residual = 0;  % We don't have any inequality constraints
 
         N_poses = size(mat_geom, 2);
-        N_segs = size(mat_geom, 1);
+        N_nodes = size(mat_geom, 1);
         eq_residual = zeros(3, N_poses);
         cell_g_circ_right = mat_geom_to_g_circ(mat_geom);
         for i_arm = 1 : length(cell_g_circ_right)
             % Fetch the twist matrix of the current arm series
             mat_g_circ_right_i = cell_g_circ_right{i_arm};
 
-            % Integrate all the g_circ_rights/twists along the arm to find
-            % the tip pose
-            pose = Pose2.hat(pose_base);
-            for j = 1 : N_segs
-                pose = pose * Twist2.expm(mat_g_circ_right_i(:, j));
-            end
+            g_0 = Pose2.hat(pose_base);
+            poses = calc_poses(g_0, mat_g_circ_right_i);
+            tip_pose = poses(:, :, end);
 
-            tip_pose = pose;
             g_target_i = Pose2.hat(tip_poses(:, i_arm));
             rdelta_pose = inv(tip_pose) * g_target_i;
             K_weights = diag([1, 1, 0.1]);
@@ -108,13 +109,14 @@ function cell_g_circ_out = find_base_curve_use_heuristics(pose_base, tip_poses, 
         % Convert a "geometry matrix" to a cell array of matrices of twists
         
         N_poses = size(mat_geom, 2);
-        N_segs = size(mat_geom, 1) / 2;
+        N_nodes = size(mat_geom, 1) / 2;
         cell_g_circ_out = cell(1, N_poses);
         for i = 1 : N_poses
             v_geom_i = mat_geom(:, i);
             cell_g_circ_out{i} = v_geom_to_g_circ(v_geom_i);
         end
     end
+
 
 end
 
