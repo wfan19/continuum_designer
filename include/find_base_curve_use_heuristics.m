@@ -30,30 +30,10 @@ function cell_g_circ_out = find_base_curve_use_heuristics(pose_base, tip_poses, 
     % vector". 
     %
 
-    % ========== Old version =========
-    % cell_g_circ = cell(1, size(tip_poses, 2));
-    % mat_geom_out = zeros(N_segs*2, length(tip_poses));
-    % 
-    % for i_pose = 1 : size(tip_poses, 2)
-    %     opts = optimoptions("fmincon", "algorithm", "interior-point", "display", "notify-detailed");
-    %     f_constraint = @(v_in) base_curve_tip_constraint_v(v_in, Pose2.hat(pose_base), Pose2.hat(tip_poses(:, i_pose)));
-    % 
-    %     [soln, res] = fmincon(@base_curve_cost_v, v_geo_0, [], [], [], [], [], [], f_constraint, opts);
-    %     cell_g_circ{i_pose} = v_geom_to_g_circ(soln);
-    %     mat_geom_out(:, i_pose) = soln;
-    % end
-
-
-    %============ New ===========
+    %% Function body
     N_poses = size(tip_poses, 2);
     v_geo_0 = repmat([0.01; 0], N_segs, 1);
     mat_geo_0 = repmat(v_geo_0, 1, N_poses);
-
-    % Create a simple arm (we don't care about its neutral length or width)
-    % We only care about its base curve - using the arm object lets us
-    % access the functions for computing reaction forces along the arm
-    simple_arm = ArmSeriesFactory.constant_2d_muscle_arm(N_segs, 0.01, 1);
-
 
     % Create the A and b matrix for applying a non-negative constraint on
     % the lengths
@@ -72,6 +52,8 @@ function cell_g_circ_out = find_base_curve_use_heuristics(pose_base, tip_poses, 
     [soln, res] = fmincon(f_cost, mat_geo_0, A_select_ls, b_zero, [], [], [], [], @base_curve_tip_constraint, opts);
     cell_g_circ_out = mat_geom_to_g_circ(soln);
 
+    %% Cost functions
+    % Constraint cost function
     function [ineq_residual, eq_residual] = base_curve_tip_constraint(mat_geom)
         % In:
         %   mat_geo: Geometry matrix describing lengths and curvatures of
@@ -104,6 +86,7 @@ function cell_g_circ_out = find_base_curve_use_heuristics(pose_base, tip_poses, 
         end
     end
     
+    %% Helper functions
     function mat_g_circ_right = v_geom_to_g_circ(v_geom)
         % Convert a "geometry vector" to a matrix of twists
         % By "geometry vector" I mean [l_1; k_1; l_2; k_2; ...; l_n; k_n]
