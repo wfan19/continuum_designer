@@ -46,7 +46,7 @@ function cell_g_circ_out = find_base_curve_use_heuristics(pose_base, tip_poses, 
 
     %============ New ===========
     N_poses = size(tip_poses, 2);
-    v_geo_0 = repmat([1; 0], N_segs, 1);
+    v_geo_0 = repmat([0.01; 0], N_segs, 1);
     mat_geo_0 = repmat(v_geo_0, 1, N_poses);
 
     % Create a simple arm (we don't care about its neutral length or width)
@@ -68,7 +68,8 @@ function cell_g_circ_out = find_base_curve_use_heuristics(pose_base, tip_poses, 
 
     b_zero = zeros(N_states / 2, 1);
 
-    [soln, res] = fmincon(f_cost, mat_geo_0, A_select_ls, b_zero, [], [], [], [], @base_curve_tip_constraint);
+    opts = optimoptions("fmincon", "MaxFunctionEvaluations", 3e3);
+    [soln, res] = fmincon(f_cost, mat_geo_0, A_select_ls, b_zero, [], [], [], [], @base_curve_tip_constraint, opts);
     cell_g_circ_out = mat_geom_to_g_circ(soln);
 
     function [ineq_residual, eq_residual] = base_curve_tip_constraint(mat_geom)
@@ -98,7 +99,7 @@ function cell_g_circ_out = find_base_curve_use_heuristics(pose_base, tip_poses, 
             tip_pose = pose;
             g_target_i = Pose2.hat(tip_poses(:, i_arm));
             rdelta_pose = inv(tip_pose) * g_target_i;
-            K_weights = diag([1, 1, 0]);
+            K_weights = diag([1, 1, 0.1]);
             eq_residual(:, i_arm) = K_weights * Twist2.vee(logm(rdelta_pose));
         end
     end
