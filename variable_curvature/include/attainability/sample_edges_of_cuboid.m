@@ -16,6 +16,7 @@ function points_out = sample_edges_of_cuboid(N_points_per_edge, scales)
             points = [points, vert_i_repeat];
         end
     end
-    
+    points = unique(points', 'rows')';
+
     points_out = diag(scales) * points;
 end

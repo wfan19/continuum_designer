@@ -1,4 +1,4 @@
-function [min_dists, closest_pts, weights] = calc_rltv_attainability_metrics(q_f, q_m, bndry_rltv_af, bndry_rltv_am)
+function [min_dists, closest_pts, weights] = calc_rltv_attainability_metric(q_f, q_m, bndry_rltv_af, bndry_rltv_am)
     % For each given reaction requirement (qf, qm), compute the closest
     % distance between it and each of the convex hulls that it must lie
     % within. 
