@@ -25,7 +25,7 @@ function [v_attainable, min_dists, p_solns] = check_reactions_attainable(q_tests
     for i = 1 : N_tests
         % Define the cost function: for each pressure, find how close it
         % gets the reactions to those required.
-        f_reaction_dist = @(pres) check_equilibrium_norm(pres, q_tests(:, :, i), segment_twists);
+        f_reaction_dist = @(pres) check_equilibrium_norm_modified(pres, q_tests(:, :, i), segment_twists);
         opts = optimoptions('fmincon', 'display', 'off', 'StepTolerance', 1e-20, 'FunctionTolerance', 1e-10); 
 
         % Solve the optimization problem
