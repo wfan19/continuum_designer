@@ -1,4 +1,13 @@
-function cell_g_circ_out = find_shape_single_seg(pose_base, tip_poses, tip_load, N_nodes, f_cost)
+function [cell_g_circ_out, res] = find_shape_single_seg(pose_base, tip_poses, tip_load, N_nodes, f_cost, opts, mat_geo_0)
+    arguments
+        pose_base
+        tip_poses
+        tip_load
+        N_nodes
+        f_cost
+        opts = optimoptions("fmincon", "MaxFunctionEvaluations", 3e4)
+        mat_geo_0 = []
+    end
     % NOTE: This function is heavily based on the
     % "find_base_curve_use_heuristics.m" function. However, we draw the
     % distinction between planning for a multi-segment VC arm versus a single 
@@ -30,7 +39,6 @@ function cell_g_circ_out = find_shape_single_seg(pose_base, tip_poses, tip_load,
     %   l_n1, l_n2, ...,       l_nm;
     %   k_n1, k_n2, ...,       k_nm;
     % ]
-    % NOTE (8/17/2024): The above is wrong, it's actually transposed.
     %
     % where l_ij and k_ij are respectively the length and curvature of
     % segment i in the arm reaching target j.
@@ -42,8 +50,11 @@ function cell_g_circ_out = find_shape_single_seg(pose_base, tip_poses, tip_load,
 
     %% Function body
     N_poses = size(tip_poses, 2);
-    v_geo_0 = repmat([0.1; 0], N_nodes, 1);
-    mat_geo_0 = repmat(v_geo_0, 1, N_poses);
+
+    if isempty(mat_geo_0)
+        v_geo_0 = repmat([0.1; 0], N_nodes, 1);
+        mat_geo_0 = repmat(v_geo_0, 1, N_poses);
+    end
 
     % Create the A and b matrix for applying a non-negative constraint on
     % the lengths
@@ -58,7 +69,6 @@ function cell_g_circ_out = find_shape_single_seg(pose_base, tip_poses, tip_load,
 
     b_zero = zeros(N_states / 2, 1);
 
-    opts = optimoptions("fmincon", "MaxFunctionEvaluations", 3e4);
     [soln, res] = fmincon(f_cost, mat_geo_0, A_select_ls, b_zero, [], [], [], [], @base_curve_tip_constraint, opts);
     cell_g_circ_out = mat_geom_to_g_circ(soln);
 

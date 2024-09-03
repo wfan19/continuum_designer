@@ -1,4 +1,4 @@
-function [min_dists, closest_pts, weights] = calc_rltv_attainability_metric(q_f, q_m, bndry_rltv_af, bndry_rltv_am)
+function [min_dists, closest_pts, weights] = calc_rltv_attainability_metric(w_f, w_m, bndry_rltv_af, bndry_rltv_am)
     % For each given reaction requirement (qf, qm), compute the closest
     % distance between it and each of the convex hulls that it must lie
     % within. 
@@ -13,8 +13,8 @@ function [min_dists, closest_pts, weights] = calc_rltv_attainability_metric(q_f,
     %   - bndry_rltv_am: sasme but for the moments
     
     % Get the dimensionality
-    N_poses = size(q_f, 1);
-    N_test_qs = size(q_f, 2);
+    N_poses = size(w_f, 1);
+    N_test_qs = size(w_f, 2);
 
     % Preallocate outputs
     min_dists = zeros(N_poses, N_test_qs);
@@ -23,7 +23,7 @@ function [min_dists, closest_pts, weights] = calc_rltv_attainability_metric(q_f,
 
     % For each requirement
     for i_q = 1 : N_test_qs
-        q_i = [q_f(:, i_q)'; q_m(:, i_q)'];
+        q_i = [w_f(:, i_q)'; w_m(:, i_q)'];
         for i = 2 : N_poses
             % Get the convex hull of the vertices
             % NOTE: computing the closest distance/points does not require
