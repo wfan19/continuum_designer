@@ -1,4 +1,4 @@
-function ax = plot_wrench_hull(bndry_af, bndry_am, ax, color, plot_style)
+function ax = plot_wrench_hull(bndry_af, bndry_am, ax, color, plot_style, z_scale)
 
     arguments
         bndry_af
@@ -6,6 +6,7 @@ function ax = plot_wrench_hull(bndry_af, bndry_am, ax, color, plot_style)
         ax = axes(figure());
         color = [255 48 150] / 255;
         plot_style = struct("facealpha", 0.6, "linewidth", 1)
+        z_scale = 1
     end
     N_poses = size(bndry_af, 1);
     N_rxns = size(bndry_af, 2);
@@ -44,6 +45,8 @@ function ax = plot_wrench_hull(bndry_af, bndry_am, ax, color, plot_style)
         Z(:, N_rxns * (i-1) + 1 : N_rxns*i) = Z_i;
     end
     
+    Z = Z * z_scale;
+
     fill3(ax, X, Y, Z, color, plot_style);
 end
 
