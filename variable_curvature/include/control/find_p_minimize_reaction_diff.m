@@ -1,4 +1,4 @@
-function [min_residual, best_p] = find_p_to_match_loaded_shape(segment_twists, w_tip, struct_design)
+function [min_residual, best_p] = find_p_minimize_reaction_diff(segment_twists, w_tip, struct_design)
     N_actuators = length(struct_design.p_bounds);
 
     f_reaction_dist = @(pres) check_equilibrium_norm_modified(segment_twists, w_tip, pres, struct_design);

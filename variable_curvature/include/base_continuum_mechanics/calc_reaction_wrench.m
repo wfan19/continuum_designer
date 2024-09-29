@@ -17,8 +17,8 @@ function [reaction_wrenches, forces] = calc_reaction_wrench(mat_segment_twists, 
         end
 
         curvatures(i, :) = mat_segment_twists(3, :) ./ lengths(i, :);
-        %moments(i, :) = (-0.25/3.5) * (p(i) / struct_design.p_bounds(i)) * curvatures(i, :);
-        moments(i, :) = (-0.25/3.5) * 1 * curvatures(i, :);
+        moments(i, :) = (-1/3.5) * (p(i) / struct_design.p_bounds(i)) * curvatures(i, :);
+        %moments(i, :) = (-0.25/3.5) * 1 * curvatures(i, :);
     end
     reaction_wrenches = struct_design.mat_A * forces;
     reaction_wrenches = reaction_wrenches + [0 0 0 0; 0 0 0 0; 1 1 1 1] * moments;

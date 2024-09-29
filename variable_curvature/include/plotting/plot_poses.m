@@ -7,10 +7,11 @@ function plot_poses(poses, ax, linestyle, plot_pose_markers, axis_length)
         axis_length = 0.15;
     end
 
-    red = [220 38 126] / 255;
-    blue = [100 143 255] / 255;
-    yellow = [255 176 0] / 255;
-    green = [45 182 125] / 255;
+    color_green = [45 182 125] / 255;
+    color_yellow = [255 176 0] / 255;
+    color_blue = [100 143 255] / 255;
+    color_red = [255 48 150] / 255;
+    color_gray = [150, 150, 150]/255;
     
     % Extract position components
     p_x = squeeze(poses(1, 3, :));
@@ -28,8 +29,8 @@ function plot_poses(poses, ax, linestyle, plot_pose_markers, axis_length)
         y_u = squeeze(poses(1, 2, :));
         y_v = squeeze(poses(2, 2, :));
 
-        quiver(ax, p_x, p_y, x_u, x_v, axis_length, "color", red, "linewidth", 2, "HandleVisibility","off");
-        quiver(ax, p_x, p_y, y_u, y_v, axis_length, "color", green, "linewidth", 2, "HandleVisibility", "off");
+        quiver(ax, p_x, p_y, x_u, x_v, axis_length, "color", color_red, "linewidth", 2, "HandleVisibility","off");
+        quiver(ax, p_x, p_y, y_u, y_v, axis_length, "color", color_green, "linewidth", 2, "HandleVisibility", "off");
     end
     axis(ax, "equal")
 end

@@ -47,6 +47,6 @@ function ax = plot_wrench_hull(bndry_af, bndry_am, ax, color, plot_style, z_scal
     
     Z = Z * z_scale;
 
-    fill3(ax, X, Y, Z, color, plot_style);
+    fill3(ax, X, Y, Z, color, plot_style, "handlevisibility", "off");
 end
 
