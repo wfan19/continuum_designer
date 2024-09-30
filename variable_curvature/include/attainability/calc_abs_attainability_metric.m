@@ -1,4 +1,11 @@
-function metric_out = calc_abs_attainability_metric(segment_twists, w_tip, struct_design)
+function metric_out = calc_abs_attainability_metric(segment_twists, w_tip, struct_design, K)
+    arguments
+        segment_twists
+        w_tip
+        struct_design
+        K = [1, 1];
+    end
+
     N_nodes = size(segment_twists, 2);
     
     [bndry_af, bndry_am] = calc_attainable_wrench_hull(segment_twists, struct_design);
@@ -14,7 +21,7 @@ function metric_out = calc_abs_attainability_metric(segment_twists, w_tip, struc
         % absolute attainable wrench space sets
         requirement_i = a_requirements([1, 3], i);
         bndry_verts_i = [bndry_af(i, :); bndry_am(i, :)];
-        metric_out = metric_out + distance_to_convex_set(requirement_i, bndry_verts_i);
+        metric_out = metric_out + distance_to_convex_set(requirement_i, bndry_verts_i, K);
     end
 end
 

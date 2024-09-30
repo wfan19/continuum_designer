@@ -1,10 +1,11 @@
-function [p_soln, twists_soln, poses_soln, res, output] = find_p_minimize_pose_error(segment_twists, w_tip, struct_design, poses_to_count)
+function [p_soln, twists_soln, poses_soln, res, output] = find_p_minimize_pose_error(segment_twists, w_tip, struct_design, poses_to_count, args)
 
     arguments
         segment_twists
         w_tip
         struct_design
         poses_to_count = zeros(1, size(segment_twists, 2))
+        args.p_0 = zeros(size(struct_design.p_bounds));
     end
 
     if all(poses_to_count == 0)
@@ -17,8 +18,8 @@ function [p_soln, twists_soln, poses_soln, res, output] = find_p_minimize_pose_e
     target_poses = calc_poses(struct_design.g_0, segment_twists);
 
     opts = optimoptions("fmincon");
-    p_0 = zeros(N_actuators, 1);
-    [p_soln, res, exitflag, output] = fmincon(@cost, p_0, [], [], [], [], p_0, struct_design.p_bounds, [], opts);
+    p_min = zeros(size(struct_design.p_bounds));
+    [p_soln, res, exitflag, output] = fmincon(@cost, args.p_0, [], [], [], [], p_min, struct_design.p_bounds, [], opts);
 
     twists_soln= solve_equilibrium_shape(N_segments, struct_design, p_soln, w_tip);
     poses_soln = calc_poses(struct_design.g_0, twists_soln);
@@ -34,7 +35,7 @@ function [p_soln, twists_soln, poses_soln, res, output] = find_p_minimize_pose_e
 
         errors = zeros(1, N_segments);
         for i_pose = find(poses_to_count)
-            delta_pose = Pose2.vee(inv(eq_poses(:, :, i_pose)) * target_poses(:, :, i_pose));
+            delta_pose = Pose2.vee(inv(eq_poses(:, :, i_pose)) * target_poses(:, :, i_pose + 1));
 
             errors(i_pose) = delta_pose' * K * delta_pose;
         end

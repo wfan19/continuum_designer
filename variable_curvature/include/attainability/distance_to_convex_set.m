@@ -1,4 +1,10 @@
-function [min_dist, closest_pt, weights] = distance_to_convex_set(point, vertices)
+function [min_dist, closest_pt, weights] = distance_to_convex_set(point, vertices, K)
+
+    arguments
+        point
+        vertices
+        K = ones(size(point));
+    end
 
     % Find the point in a convex set that minimizes the distance to a given
     % point, and return both the distance and the point's coordinates.
@@ -21,7 +27,7 @@ function [min_dist, closest_pt, weights] = distance_to_convex_set(point, vertice
 
     assert(size(vertices, 1) == 2, "Ensure vertices is a 2D column matrix");
     
-    cost_func = @(v_weights) norm(point - (vertices * v_weights));
+    cost_func = @(v_weights) (point - (vertices * v_weights))' * diag(K) * (point - (vertices * v_weights));
     
     % Construct the convex-combination constraint
     constraint_A = ones(1, size(vertices, 2));
